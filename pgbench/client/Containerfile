@@ -1,0 +1,8 @@
+FROM registry.fedoraproject.org/fedora-minimal:34
+
+RUN microdnf -y install postgresql-contrib && microdnf clean all
+
+COPY
+
+# pgbench -i -s 10 -h localhost -U patient_portal
+# pgbench -j 10 -c 10 -T 30 -h localhost -U patient_portal
