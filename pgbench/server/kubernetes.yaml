@@ -1,0 +1,36 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: pgbench-server
+  name: pgbench-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: pgbench-server
+  template:
+    metadata:
+      labels:
+        app: pgbench-server
+    spec:
+      containers:
+        - name: pgbench-server
+          image: quay.io/ssorj/benchdog-pgbench-server
+          ports:
+            - containerPort: 5432
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: pgbench-server
+  name: pgbench-server
+spec:
+  ports:
+  - port: 5432
+    protocol: TCP
+    targetPort: 5432
+  selector:
+    app: pgbench-server
+  type: LoadBalancer
