@@ -3,4 +3,6 @@ FROM postgres
 RUN apt-get update
 RUN apt-get install postgresql-contrib
 
-CMD ["pgbench", "-j", "10", "-c", "10", "-T", "30", "-h", "localhost", "-U", "test"]
+COPY run.sh /run.sh
+
+CMD /run.sh
