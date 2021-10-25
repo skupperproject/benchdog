@@ -1,3 +1,5 @@
 #!/bin/bash
 
-exec pgbench --initialize --scale 10 --username test
+PGPASSWORD="$POSTGRES_PASSWORD"
+
+exec pgbench --username "$POSTGRES_USER" --initialize --scale 100

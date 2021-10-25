@@ -1,8 +1,9 @@
 FROM postgres
 
-RUN apt-get update
-RUN apt-get install postgresql-contrib
+RUN apt-get -qq update > /dev/null
+RUN apt-get -qq install postgresql-contrib python3-numpy > /dev/null
 
+COPY process.py /process.py
 COPY run.sh /run.sh
 
 CMD /run.sh
