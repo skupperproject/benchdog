@@ -1,0 +1,16 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: pi
+spec:
+  template:
+    spec:
+      containers:
+      - name: pgbench-client
+        image: quay.io/ssorj/benchdog-pgbench-client
+        env:
+        - name: PGBENCH_SERVER_HOST
+          value: pgbench-server
+        - name: PGBENCH_SERVER_PORT
+          value: 5432
+      restartPolicy: Never
