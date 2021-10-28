@@ -19,18 +19,15 @@ export PGPASSWORD=postgres
 function run {
     local clients=$1
 
-    echo "## $clients client(s)"
-    echo
-
     for ((i=1; i <= BENCHDOG_ITERATIONS; i++)); do
-        echo "### Run $i"
+        sleep 10
+        echo "# Run: clients: $clients, iteration $i"
         echo
-        pgbench --jobs 1 --client 1 $common_args
+        pgbench --jobs $clients --client $clients $common_args
         echo
         cat pgbench_log.* > pgbench_log
         python3 process.py pgbench_log >> results-$clients.txt
         rm pgbench_log*
-        sleep 10
     done
 }
 
@@ -38,22 +35,13 @@ run 1
 run 10
 run 100
 
-echo "## All results"
-echo
-
-echo "### 1 client"
+echo "# Processed results"
 echo
 
 cat results-1.txt
 echo
 
-echo "### 10 clients"
-echo
-
 cat results-10.txt
-echo
-
-echo "### 100 clients"
 echo
 
 cat results-100.txt

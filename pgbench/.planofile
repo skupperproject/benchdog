@@ -4,5 +4,6 @@ def test(app):
 
     with working_dir("server"):
         with start("plano run"):
+            sleep(20)
             with working_dir(client_dir):
                 run("plano run")
