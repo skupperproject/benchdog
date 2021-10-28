@@ -3,7 +3,8 @@ FROM postgres
 RUN apt-get -qq update > /dev/null
 RUN apt-get -qq install postgresql-contrib python3-numpy > /dev/null
 
-COPY process.py /process.py
-COPY run.sh /run.sh
+COPY python /app/python
+COPY subrepos /app/subrepos
 
-CMD /run.sh
+WORKDIR /app
+CMD ["python3", "python/main.py"]
