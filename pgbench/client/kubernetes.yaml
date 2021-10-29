@@ -9,8 +9,12 @@ spec:
       - name: pgbench-client
         image: quay.io/ssorj/benchdog-pgbench-client
         env:
-        - name: PGBENCH_SERVER_HOST
+        - name: BENCHDOG_SERVER_HOST
           value: pgbench-server
-        - name: PGBENCH_SERVER_PORT
+        - name: BENCHDOG_SERVER_PORT
           value: 5432
+        - name: BENCHDOG_DURATION
+          value: 1
+        - name: BENCHDOG_ITERATONS
+          value: 3
       restartPolicy: Never

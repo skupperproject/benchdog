@@ -6,4 +6,6 @@ RUN apt-get -qq install postgresql-contrib > /dev/null
 COPY init.sh /docker-entrypoint-initdb.d/init.sh
 
 ENV POSTGRES_USER=postgres
-ENV POSTGRES_PASSWORD=postgres
+ENV POSTGRES_PASSWORD=c66efc1638e111eca22300d861c8e364
+ENV POSTGRES_HOST_AUTH_METHOD=scram-sha-256
+ENV POSTGRES_INITDB_ARGS=--auth-host=scram-sha-256

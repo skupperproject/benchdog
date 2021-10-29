@@ -4,7 +4,7 @@ import numpy as _numpy
 from plano import *
 
 ENV["PGUSER"] = "postgres"
-ENV["PGPASSWORD"] = "postgres"
+ENV["PGPASSWORD"] = "c66efc1638e111eca22300d861c8e364"
 
 host = ENV.get("BENCHDOG_SERVER_HOST", "localhost")
 port = ENV.get("BENCHDOG_SERVER_PORT", "5432")
