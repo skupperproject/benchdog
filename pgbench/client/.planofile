@@ -7,7 +7,7 @@ def build(app):
 @command(name="run")
 def run_(app, host="localhost", port=5432, duration=10):
     build(app)
-    run(f"podman run --net host"
+    run(f"podman run --net host --rm"
         f" --env BENCHDOG_SERVER_HOST={host} --env BENCHDOG_SERVER_PORT={port} --env BENCHDOG_DURATION={duration}"
         f" {image_tag}")
 
