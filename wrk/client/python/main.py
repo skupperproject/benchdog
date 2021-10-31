@@ -39,4 +39,4 @@ if __name__ == "__main__":
         "100": run_scenario(100),
     }
 
-    report(config, data)
+    report(config, data, operation_text="Each operation is an HTTP/1.1 GET request.")

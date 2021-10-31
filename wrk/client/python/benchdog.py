@@ -1,15 +1,15 @@
-from plano import *
-
 import json as _json
 import numpy as _numpy
 
-def load_config():
+from plano import *
+
+def load_config(default_port=8080):
     return Namespace(host=ENV.get("BENCHDOG_SERVER_HOST", "localhost"),
-                     port=ENV.get("BENCHDOG_SERVER_PORT", "8080"),
+                     port=ENV.get("BENCHDOG_SERVER_PORT", default_port),
                      duration=int(ENV.get("BENCHDOG_DURATION", 10)),
                      iterations=int(ENV.get("BENCHDOG_ITERATIONS", 5)))
 
-def report(config, data):
+def report(config, data, operation_text=None):
     print()
     print("## Configuration")
     print()
@@ -57,10 +57,11 @@ def report(config, data):
                              "{:,.2f}".format(latency["99"])))
 
     print()
-    print("## Notes")
-    print()
 
-    print(" - Throughput is operations per second")
-    print(" - Latencies are in milliseconds")
+    if operation_text is not None:
+        print(operation_text)
 
+    print("Throughput is the number of operations per second.")
+    print("Latency is the duration of an operation in milliseconds.")
+    print("High and low results from repeated runs are discarded.")
     print()
