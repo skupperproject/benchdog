@@ -6,19 +6,16 @@ from benchdog import *
 ENV["PGUSER"] = "postgres"
 ENV["PGPASSWORD"] = "c66efc1638e111eca22300d861c8e364"
 
-host = ENV.get("BENCHDOG_SERVER_HOST", "localhost")
-port = ENV.get("BENCHDOG_SERVER_PORT", "5432")
-duration = int(ENV.get("BENCHDOG_DURATION", 10))
-iterations = int(ENV.get("BENCHDOG_ITERATIONS", 5))
+config = load_config(default_port=5432)
 
 def run_pgbench(clients):
     args = [
         "pgbench",
         "--jobs", str(clients),
         "--client", str(clients),
-        "--host", host,
-        "--port", port,
-        "--time", str(duration),
+        "--host", config.host,
+        "--port", config.port,
+        "--time", str(config.duration),
         "--progress", "2",
         "--select-only",
         "--log",
@@ -69,32 +66,32 @@ def process_pgbench_logs():
 
     return data
 
-def run_config(clients):
+def run_scenario(clients):
     results = list()
 
-    for i in range(iterations):
-        sleep(min((10, duration)))
+    for i in range(config.iterations):
+        sleep(min((10, config.duration)))
         results.append(run_pgbench(clients))
 
     return results
 
 if __name__ == "__main__":
-    await_port(port, host=host)
+    await_port(config.port, host=config.host)
 
     while True:
         sleep(1)
 
         try:
-            run(f"psql --host {host} --port {port} --command '\d pgbench_accounts'", output=DEVNULL)
+            run(f"psql --host {config.host} --port {config.port} --command '\d pgbench_accounts'", output=DEVNULL)
         except PlanoProcessError:
             continue
         else:
             break
 
-    result = {
-        "1": run_config(1),
-        "10": run_config(10),
-        "100": run_config(100),
+    data = {
+        "1": run_scenario(1),
+        "10": run_scenario(10),
+        "100": run_scenario(100),
     }
 
-    print(emit_json(summarize(result)))
+    report(config, data, operation_text="Each operation is a SQL select.")
