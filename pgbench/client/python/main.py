@@ -11,8 +11,6 @@ port = ENV.get("BENCHDOG_SERVER_PORT", "5432")
 duration = int(ENV.get("BENCHDOG_DURATION", 10))
 iterations = int(ENV.get("BENCHDOG_ITERATIONS", 5))
 
-await_port(port, host=host)
-
 def run_pgbench(clients):
     args = [
         "pgbench",
@@ -104,6 +102,7 @@ def run_config(clients):
     append("report", _json.dumps(result) + "\n")
 
 if __name__ == "__main__":
+    await_port(port, host=host)
     run_config(1)
     run_config(10)
     run_config(100)

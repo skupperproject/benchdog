@@ -5,13 +5,12 @@ def build(app):
     run(f"podman build -t {image_tag} .")
 
 @command(name="run")
-def run_(app, host="localhost", port=5432, duration=10):
+def run_(app, host="localhost", port=8080, duration=10, iterations=5):
     build(app)
-    run(f"podman run -it --net host --rm {image_tag}")
-    #run("podman run --net host --rm docker.io/skandyla/wrk --latency --threads 10 --connections 10 --duration 10 http://localhost:8080/")
-    # run(f"podman run --net host --rm"
-    #     f" --env BENCHDOG_SERVER_HOST={host} --env BENCHDOG_SERVER_PORT={port} --env BENCHDOG_DURATION={duration}"
-    #     f" {image_tag}")
+    run(f"podman run --net host --rm"
+        f" --env BENCHDOG_SERVER_HOST={host} --env BENCHDOG_SERVER_PORT={port}"
+        f" --env BENCHDOG_DURATION={duration}  --env BENCHDOG_ITERATIONS={iterations}"
+        f" {image_tag}")
 
 @command
 def push(app):

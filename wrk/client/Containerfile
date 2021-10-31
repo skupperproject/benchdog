@@ -13,6 +13,7 @@ FROM registry.fedoraproject.org/fedora-minimal
 RUN microdnf install python3-numpy
 
 COPY --from=build /home/root/wrk/wrk /usr/bin/wrk
+COPY main.lua /app/main.lua
 COPY python /app/python
 COPY subrepos /app/subrepos
 
