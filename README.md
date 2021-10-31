@@ -1,11 +1,11 @@
 # Benchdog
 
-Containerized client-server benchmarking tools for comparing
-deployment options
+Containerized client-server benchmarking tools for comparing cloud
+networking solutions.
 
-I developed these with a focus on comparing Skupper multi-site
-deployments to other options for multi-site deployment, but there's
-nothing Skupper-specific about them.
+I developed these with a focus on comparing Skupper to other options
+for multi-site deployment, but there's nothing Skupper-specific about
+them.
 
 ## Overview
 
