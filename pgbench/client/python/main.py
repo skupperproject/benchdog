@@ -1,7 +1,7 @@
 import json as _json
 import numpy as _numpy
 
-from plano import *
+from benchdog import *
 
 ENV["PGUSER"] = "postgres"
 ENV["PGPASSWORD"] = "c66efc1638e111eca22300d861c8e364"
@@ -24,9 +24,17 @@ def run_pgbench(clients):
         "--log",
     ]
 
+    run("rm -f pgbench_log*", shell=True)
     run(args)
 
-def process_pgbench_logs(file, clients):
+    return process_pgbench_logs()
+
+def process_pgbench_logs():
+    run("cat pgbench_log.* > pgbench_log", shell=True)
+
+    if get_file_size("pgbench_log") == 0:
+        return
+
     dtype = [
         ("client_id", _numpy.uint64),
         ("transaction_no", _numpy.uint64),
@@ -36,7 +44,8 @@ def process_pgbench_logs(file, clients):
         ("time_us", _numpy.uint64),
     ]
 
-    records = _numpy.loadtxt(file, dtype=dtype)
+    records = _numpy.loadtxt("pgbench_log", dtype=dtype)
+
     records.sort(order=("time_epoch", "time_us"))
 
     start_time = records[0][4] + records[0][5] / 1000000 - records[0][2] / 1000000
@@ -44,17 +53,13 @@ def process_pgbench_logs(file, clients):
 
     duration = end_time - start_time
     operations = len(records)
-    throughput = operations / duration
-
     latencies = records["time"]
     average = _numpy.mean(latencies)
     percentiles = _numpy.percentile(latencies, (50, 99))
 
     data = {
-        "clients": clients,
         "duration": round(duration, 2),
         "operations": operations,
-        "throughput": round(throughput, 2),
         "latency": {
             "average": round(average / 1000, 2),
             "50": round(percentiles[0] / 1000, 2),
@@ -62,50 +67,34 @@ def process_pgbench_logs(file, clients):
         },
     }
 
-    append("results", _json.dumps(data) + "\n")
+    return data
 
 def run_config(clients):
-    remove("results")
+    results = list()
 
     for i in range(iterations):
-        sleep(duration)
-        run_pgbench(clients)
-        run("cat pgbench_log.* > pgbench_log", shell=True)
+        sleep(min((10, duration)))
+        results.append(run_pgbench(clients))
 
-        if get_file_size("pgbench_log") != 0:
-            process_pgbench_logs("pgbench_log", clients)
-
-        run("rm pgbench_log*", shell=True)
-
-    print()
-    print("XXX 1")
-
-    print(read("results"))
-
-    print("XXX 2")
-
-    results = list()
-    throughputs = list()
-
-    with open("results") as f:
-        for line in f:
-            result = parse_json(line)
-            results.append(result)
-            throughputs.append(result["throughput"])
-
-    index = throughputs.index(_numpy.percentile(throughputs, 50, interpolation="nearest"))
-
-    result = results[index]
-
-    print(result)
-
-    append("report", _json.dumps(result) + "\n")
+    return results
 
 if __name__ == "__main__":
     await_port(port, host=host)
-    run_config(1)
-    run_config(10)
-    run_config(100)
-    print()
-    print("XXX 3")
-    print(read("report"))
+
+    while True:
+        sleep(1)
+
+        try:
+            run(f"psql --host {host} --port {port} --command '\d pgbench_accounts'", output=DEVNULL)
+        except PlanoProcessError:
+            continue
+        else:
+            break
+
+    result = {
+        "1": run_config(1),
+        "10": run_config(10),
+        "100": run_config(100),
+    }
+
+    print(emit_json(summarize(result)))
