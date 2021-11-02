@@ -41,3 +41,4 @@ Sample output:
 - https://www.postgresql.org/docs/current/pgbench.html
 - https://gist.github.com/jkreps/c7ddb4041ef62a900e6c
 - https://github.com/denji/awesome-http-benchmark
+- https://github.com/wg/wrk
