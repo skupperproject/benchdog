@@ -33,7 +33,8 @@ Sample output:
 
 - **pgbench** - PostgreSQL
 - **wrk** - HTTP/1.1 and Nginx
-- **Quiver** - AMQP 1.0 and ActiveMQ Artemis
+
+<!-- - **Quiver** - AMQP 1.0 and ActiveMQ Artemis -->
 
 ## Unfiled
 

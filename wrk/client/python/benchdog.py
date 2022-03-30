@@ -6,7 +6,7 @@ from plano import *
 def load_config(default_port=8080):
     return Namespace(host=ENV.get("BENCHDOG_SERVER_HOST", "localhost"),
                      port=ENV.get("BENCHDOG_SERVER_PORT", default_port),
-                     duration=int(ENV.get("BENCHDOG_DURATION", 10)),
+                     duration=int(ENV.get("BENCHDOG_DURATION", 60)),
                      iterations=int(ENV.get("BENCHDOG_ITERATIONS", 5)))
 
 def report(config, data, operation_text=None):
@@ -28,7 +28,12 @@ def report(config, data, operation_text=None):
 
     for scenario in ("1", "10", "100"):
         scenario_data = data[scenario]
-        throughputs = [x["operations"] / x["duration"] for x in scenario_data]
+
+        try:
+            throughputs = [x["operations"] / x["duration"] for x in scenario_data]
+        except KeyError:
+            continue
+
         throughput = _numpy.percentile(throughputs, 50, interpolation="nearest")
         index = throughputs.index(throughput)
         result = scenario_data[index]
@@ -47,7 +52,11 @@ def report(config, data, operation_text=None):
     print(columns.format("CLIENTS", "THROUGHPUT", "LATENCY AVG", "LATENCY 50%", "LATENCY 99%"))
 
     for scenario in ("1", "10", "100"):
-        result = results[scenario]
+        try:
+            result = results[scenario]
+        except KeyError:
+            continue
+
         latency = result["latency"]
 
         print(columns.format(scenario,

@@ -1,0 +1,20 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: pi
+spec:
+  template:
+    spec:
+      containers:
+      - name: wrk-client
+        image: quay.io/ssorj/benchdog-wrk-client
+        env:
+        - name: BENCHDOG_SERVER_HOST
+          value: wrk-server
+        - name: BENCHDOG_SERVER_PORT
+          value: 8080
+        - name: BENCHDOG_DURATION
+          value: 1
+        - name: BENCHDOG_ITERATONS
+          value: 3
+      restartPolicy: Never

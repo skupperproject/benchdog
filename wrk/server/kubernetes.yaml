@@ -1,0 +1,36 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: wrk-server
+  name: wrk-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: wrk-server
+  template:
+    metadata:
+      labels:
+        app: wrk-server
+    spec:
+      containers:
+        - name: wrk-server
+          image: quay.io/ssorj/benchdog-wrk-server
+          ports:
+            - containerPort: 5432
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: wrk-server
+  name: wrk-server
+spec:
+  ports:
+  - port: 8080
+    protocol: TCP
+    targetPort: 8080
+  selector:
+    app: wrk-server
+  type: LoadBalancer
