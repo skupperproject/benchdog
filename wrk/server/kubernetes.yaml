@@ -18,7 +18,7 @@ spec:
         - name: wrk-server
           image: quay.io/ssorj/benchdog-wrk-server
           ports:
-            - containerPort: 5432
+            - containerPort: 8080
 ---
 apiVersion: v1
 kind: Service
