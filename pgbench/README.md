@@ -12,7 +12,7 @@ command removes the OpenShift prohibition:
 
 ## Running the client job
 
-    kubectl run -it --rm --env BENCHDOG_SERVER_HOST=169.63.182.185 --env BENCHDOG_SERVER_PORT=5432 --env BENCHDOG_DURATION=1 --env BENCHDOG_ITERATONS=3 --image quay.io/ssorj/benchdog-pgbench-client pgbench-client
+    kubectl run -it --rm --env BENCHDOG_SERVER_HOST=<host> --env BENCHDOG_SERVER_PORT=5432 --env BENCHDOG_DURATION=5 --env BENCHDOG_ITERATIONS=3 --image quay.io/ssorj/benchdog-pgbench-client pgbench-client
 
 ## Links
 

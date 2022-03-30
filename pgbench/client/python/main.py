@@ -30,7 +30,7 @@ def process_pgbench_logs():
     run("cat pgbench_log.* > pgbench_log", shell=True)
 
     if get_file_size("pgbench_log") == 0:
-        return
+        raise Exception("No data in pgbench logs")
 
     dtype = [
         ("client_id", _numpy.uint64),
