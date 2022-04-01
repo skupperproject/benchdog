@@ -4,8 +4,9 @@ import numpy as _numpy
 from plano import *
 
 def load_config(default_port=8080):
-    return Namespace(host=ENV.get("BENCHDOG_SERVER_HOST", "localhost"),
-                     port=ENV.get("BENCHDOG_SERVER_PORT", default_port),
+    return Namespace(host=ENV.get("BENCHDOG_HOST", "localhost"),
+                     port=ENV.get("BENCHDOG_PORT", default_port),
+                     tls=ENV.get("BENCHDOG_TLS", "0") == "1",
                      duration=int(ENV.get("BENCHDOG_DURATION", 60)),
                      iterations=int(ENV.get("BENCHDOG_ITERATIONS", 5)))
 
@@ -14,15 +15,20 @@ def report(config, data, operation_text=None):
     print("## Configuration")
     print()
 
-    print(f"Server: {config.host}:{config.port}")
+    if config.tls:
+        tls_state = "TLS enabled"
+    else:
+        tls_state = "TLS disabled"
+
+    print(f"Connection: {config.host}:{config.port} ({tls_state})")
     print(f"Duration: {config.duration} {plural('second', config.duration)}")
     print(f"Iterations: {config.iterations}")
 
-    print()
-    print("## Data")
-    print()
+    # print()
+    # print("## Data")
+    # print()
 
-    print(_json.dumps(data))
+    # print(_json.dumps(data))
 
     results = dict()
 

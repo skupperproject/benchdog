@@ -6,15 +6,19 @@ from benchdog import *
 config = load_config()
 
 def run_wrk(clients):
+    if config.tls:
+        scheme = "https"
+    else:
+        scheme = "http"
+
     args = [
         "wrk",
-        "--header", "'Connection: close'",
         "--threads", str(clients),
         "--connections", str(clients),
         "--duration", str(config.duration),
         "--latency",
         "--script", "main.lua", # This writes to result.json
-        f"http://{config.host}:{config.port}/",
+        f"{scheme}://{config.host}:{config.port}/",
     ]
 
     run(args)

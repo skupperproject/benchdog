@@ -8,7 +8,7 @@ def build(app):
 def run_(app, host="localhost", port=8080, duration=10, iterations=5):
     build(app)
     run(f"podman run --net host --rm"
-        f" --env BENCHDOG_SERVER_HOST={host} --env BENCHDOG_SERVER_PORT={port}"
+        f" --env BENCHDOG_HOST={host} --env BENCHDOG_PORT={port}"
         f" --env BENCHDOG_DURATION={duration}  --env BENCHDOG_ITERATIONS={iterations}"
         f" {image_tag}")
 
