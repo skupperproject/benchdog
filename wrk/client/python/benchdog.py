@@ -16,11 +16,13 @@ def report(config, data, operation_text=None):
     print()
 
     if config.tls:
-        tls_state = "TLS enabled"
+        tls_state = "Enabled"
     else:
-        tls_state = "TLS disabled"
+        tls_state = "Disabled"
 
-    print(f"Connection: {config.host}:{config.port} ({tls_state})")
+    print(f"Host: {config.host}")
+    print(f"Port: {config.port}")
+    print(f"TLS: {tls_state}")
     print(f"Duration: {config.duration} {plural('second', config.duration)}")
     print(f"Iterations: {config.iterations}")
 
