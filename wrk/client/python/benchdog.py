@@ -16,9 +16,9 @@ def report(config, data, operation_text=None):
     print()
 
     if config.tls:
-        tls_state = "Enabled"
+        tls_state = "enabled"
     else:
-        tls_state = "Disabled"
+        tls_state = "disabled"
 
     print(f"Host: {config.host}")
     print(f"Port: {config.port}")
