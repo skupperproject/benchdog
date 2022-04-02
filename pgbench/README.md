@@ -38,6 +38,9 @@ Client namespace:
 Once the `pgbench-server` service appears in the client namespace, you can
 run the client using that value for `BENCHDOG_HOST`.
 
+For more information, see [Getting started with
+Skupper](https://skupper.io/start/index.html).
+
 ## Configuring Skupper router resource limits
 
     skupper init --routers 2 --router-cpu-limit 0.5
