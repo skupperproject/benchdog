@@ -42,7 +42,7 @@ The benchmark client is configured using these environment variables:
 
 - **BENCHDOG_HOST** - The host to connect to (default localhost)
 - **BENCHDOG_PORT** - The port to connect to (the default is benchmark-specific)
-- **BENCHDOG_TLS** - Set to "1" to connect using TLS (default disabled)
+- **BENCHDOG_TLS** - Set to `1` to connect using TLS (TLS is off by default)
 - **BENCHDOG_DURATION** - The time in seconds to run the test (default 60)
 - **BENCHDOG_ITERATIONS** - The number of repeated runs for each scenario (default 5)
 
