@@ -1,23 +1,35 @@
 # Wrk
 
-## Setup
+An HTTP/1.1 benchmark test
+
+## Running the server in Kubernetes
+
+Server namespace:
+
+    kubectl apply -f server/
+
+## Running the client in Kubernetes
+
+Client namespace:
+
+    kubectl run -it --rm --env BENCHDOG_HOST=<host> --image quay.io/ssorj/benchdog-wrk-client wrk-client
+
+## Connecting across sites using Skupper
 
 Server namespace:
 
     skupper init
-    # skupper init --routers 2 --router-cpu-limit 0.5
     skupper token create ~/token.yaml
-    kubectl apply -f server/
     skupper expose deployment/wrk-server --port 8080
 
 Client namespace:
 
     skupper init
-    # skupper init --routers 2 --router-cpu-limit 0.5
     skupper link create ~/token.yaml
 
-## Run
+Once the `wrk-server` service appears in the client namespace, you can
+run the client using that value for `BENCHDOG_HOST`.
 
-Client namespace:
+## Configuring Skupper router resource limits
 
-    kubectl run -it --rm --env BENCHDOG_HOST=wrk-server --env BENCHDOG_PORT=8080 --env BENCHDOG_DURATION=60 --env BENCHDOG_ITERATIONS=3 --image quay.io/ssorj/benchdog-wrk-client wrk-client
+    skupper init --routers 2 --router-cpu-limit 0.5
