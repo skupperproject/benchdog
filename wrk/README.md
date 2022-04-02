@@ -1,4 +1,4 @@
-# Wrk
+# Benchdog: wrk
 
 An HTTP/1.1 benchmark test
 

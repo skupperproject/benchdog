@@ -1,4 +1,4 @@
-# pgbench
+# Benchdog: pgbench
 
 A PostgreSQL benchmark test
 
