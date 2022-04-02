@@ -36,6 +36,25 @@ Sample output:
 
 <!-- - **Quiver** - AMQP 1.0 and ActiveMQ Artemis -->
 
+## Configuration
+
+The benchmark client is configured using these environment variables:
+
+BENCHDOG_HOST
+: The host to connect to
+
+BENCHDOG_PORT
+: The port to connect to
+
+BENCHDOG_TLS
+: Set to "1" to enable TLS
+
+BENCHDOG_DURATION
+: The time in seconds to run the test
+
+BENCHDOG_ITERATIONS
+: The number of repeated runs for each scenario
+
 ## Unfiled
 
 - https://dev.mysql.com/downloads/benchmarks.html
