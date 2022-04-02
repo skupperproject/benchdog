@@ -16,7 +16,7 @@ tests run with a single server instance.  The number of clients varies
 across three scenarios: 1 client, 10 clients, and 100 clients.
 
 For each scenario, we perform a certain number of iterations (default
-3).  For our results, we keep only the "middlest" value, by
+5).  For our results, we keep only the "middlest" value, by
 throughput.
 
 Sample output:
@@ -40,13 +40,13 @@ Sample output:
 
 The benchmark client is configured using these environment variables:
 
-- **BENCHDOG_HOST** - The host to connect to
-- **BENCHDOG_PORT** - The port to connect to
-- **BENCHDOG_TLS** - Set to "1" to enable TLS
-- **BENCHDOG_DURATION** - The time in seconds to run the test
-- **BENCHDOG_ITERATIONS** - The number of repeated runs for each scenario
+- **BENCHDOG_HOST** - The host to connect to (default localhost)
+- **BENCHDOG_PORT** - The port to connect to (the default is benchmark specific)
+- **BENCHDOG_TLS** - Set to "1" to connect using TLS (default disabled)
+- **BENCHDOG_DURATION** - The time in seconds to run the test (default 60)
+- **BENCHDOG_ITERATIONS** - The number of repeated runs for each scenario (default 5)
 
-## Unfiled
+## Resources
 
 - https://dev.mysql.com/downloads/benchmarks.html
 - https://www.postgresql.org/docs/current/pgbench.html
