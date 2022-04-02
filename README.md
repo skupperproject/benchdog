@@ -3,9 +3,11 @@
 Containerized client-server benchmarking tools for comparing cloud
 networking solutions.
 
-I developed these with a focus on comparing Skupper to other options
-for multi-site deployment, but there's nothing Skupper-specific about
-them.
+I developed these with a focus on comparing [Skupper][skupper] to
+other options for multi-site deployment, but there's nothing
+Skupper-specific about them.
+
+[skupper]: https://skupper.io/
 
 ## Overview
 
@@ -20,11 +22,11 @@ throughput.
 Sample output:
 
     CLIENTS    THROUGHPUT   LATENCY AVG   LATENCY 50%   LATENCY 99%
-          1     10,067.27        101.25         93.00        352.00
-         10     70,830.91        239.37        130.00      2,591.00
-        100     63,168.18      1,883.14      1,401.00     10,427.00
+          1        581.98          1.82          1.64          6.84
+         10      4,444.76          2.40          2.05          9.02
+        100     19,770.96          5.19          4.58         14.27
 
-    Each operation is an HTTP/1.1 GET.
+    Each operation is an HTTP/1.1 GET request.
     Throughput is the number of operations per second.
     Latency is the duration of an operation in milliseconds.
     High and low results from repeated runs are discarded.
