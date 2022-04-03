@@ -21,7 +21,7 @@ Client namespace:
     kubectl config set-context --current --namespace benchdog-client
     kubectl run -it --rm --env BENCHDOG_HOST=<host> --image quay.io/ssorj/benchdog-wrk-client wrk-client
 
-## Connecting across sites using Skupper
+## Testing with Skupper
 
 Server namespace:
 
@@ -37,7 +37,9 @@ Client namespace:
     skupper link create ~/token.yaml
 
 Once the `wrk-server` service appears in the client namespace, you can
-run the client with `--env BENCHDOG_HOST=wrk-server`:
+run the client with `--env BENCHDOG_HOST=wrk-server`.
+
+Client namespace:
 
     kubectl run -it --rm --env BENCHDOG_HOST=wrk-server --image quay.io/ssorj/benchdog-wrk-client wrk-client
 
