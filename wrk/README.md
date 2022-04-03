@@ -37,7 +37,9 @@ Client namespace:
     skupper link create ~/token.yaml
 
 Once the `wrk-server` service appears in the client namespace, you can
-run the client with `--env BENCHDOG_HOST=wrk-server`.
+run the client with `--env BENCHDOG_HOST=wrk-server`:
+
+    kubectl run -it --rm --env BENCHDOG_HOST=wrk-server --image quay.io/ssorj/benchdog-wrk-client wrk-client
 
 For more information, see [Getting started with
 Skupper](https://skupper.io/start/index.html).

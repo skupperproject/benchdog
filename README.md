@@ -48,6 +48,9 @@ The benchmark client is configured using these environment variables:
 
 ## Testing with Skupper
 
+The individual benchmarks have instructions for running the client and
+server on Kubernetes.
+
 ### Configuring Skupper router resource limits
 
 Setting the CPU limit implicitly sets the requested CPU to the same
@@ -56,6 +59,9 @@ value.
     skupper init --routers 2 --router-cpu-limit 0.5
 
 ### Monitoring CPU and memory usage
+
+I find these useful for confirming that my configuration has taken
+effect.
 
     watch kubectl top pod -n benchdog-client
     watch kubectl top pod -n benchdog-server
