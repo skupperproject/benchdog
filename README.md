@@ -46,6 +46,20 @@ The benchmark client is configured using these environment variables:
 - **BENCHDOG_DURATION** - The time in seconds to run the test (default 60)
 - **BENCHDOG_ITERATIONS** - The number of repeated runs for each scenario (default 5)
 
+## Testing with Skupper
+
+### Configuring Skupper router resource limits
+
+Setting the CPU limit implicitly sets the requested CPU to the same
+value.
+
+    skupper init --routers 2 --router-cpu-limit 0.5
+
+### Monitoring CPU and memory usage
+
+    watch kubectl top pod -n benchdog-client
+    watch kubectl top pod -n benchdog-server
+
 ## Resources
 
 - https://dev.mysql.com/downloads/benchmarks.html

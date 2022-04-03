@@ -1,38 +1,43 @@
 # Benchdog: wrk
 
+A containerized HTTP/1.1 benchmark tool based on
+[wrk](https://github.com/wg/wrk) and [ngingx](https://nginx.org/).
+
 An HTTP/1.1 benchmark test
 
 ## Running the server in Kubernetes
 
 Server namespace:
 
+    kubectl create namespace benchdog-server
+    kubectl config set-context --current --namespace benchdog-server
     kubectl apply -f server/
 
 ## Running the client in Kubernetes
 
 Client namespace:
 
+    kubectl create namespace benchdog-client
+    kubectl config set-context --current --namespace benchdog-client
     kubectl run -it --rm --env BENCHDOG_HOST=<host> --image quay.io/ssorj/benchdog-wrk-client wrk-client
 
 ## Connecting across sites using Skupper
 
 Server namespace:
 
+    kubectl config set-context --current --namespace benchdog-server
     skupper init
     skupper token create ~/token.yaml
     skupper expose deployment/wrk-server --port 8080
 
 Client namespace:
 
+    kubectl config set-context --current --namespace benchdog-client
     skupper init
     skupper link create ~/token.yaml
 
 Once the `wrk-server` service appears in the client namespace, you can
-run the client using that value for `BENCHDOG_HOST`.
+run the client with `--env BENCHDOG_HOST=wrk-server`.
 
 For more information, see [Getting started with
 Skupper](https://skupper.io/start/index.html).
-
-## Configuring Skupper router resource limits
-
-    skupper init --routers 2 --router-cpu-limit 0.5
