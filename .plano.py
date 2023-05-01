@@ -32,3 +32,7 @@ def bench_configs():
     run_config(1, 1)
     # run_config(2, 1)
     # run_config(2, 0.5)
+
+@command
+def clean():
+    remove(find(".", "__pycache__"))
