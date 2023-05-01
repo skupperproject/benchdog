@@ -17,8 +17,8 @@
 # under the License.
 #
 
+import getpass as _getpass
 import os as _os
-import pwd as _pwd
 import signal as _signal
 import socket as _socket
 import sys as _sys
@@ -29,9 +29,9 @@ try:
 except ImportError: # pragma: nocover
     import BaseHTTPServer as _http
 
-from plano import *
+from .test import *
 
-test_project_dir = join(get_parent_dir(get_parent_dir(__file__)), "test-project")
+test_project_dir = join(get_parent_dir(__file__), "_testproject")
 
 class test_project(working_dir):
     def __enter__(self):
@@ -48,7 +48,7 @@ def archive_operations():
         touch("some-dir/some-file")
 
         make_archive("some-dir")
-        assert is_file("some-dir.tar.gz")
+        assert is_file("some-dir.tar.gz"), list_dir()
 
         extract_archive("some-dir.tar.gz", output_dir="some-subdir")
         assert is_dir("some-subdir/some-dir")
@@ -89,9 +89,10 @@ def command_operations():
 
     SomeCommand().main([])
     SomeCommand().main(["--interrupt"])
+    SomeCommand().main(["--debug"])
 
     with expect_system_exit():
-        SomeCommand().main(["--verbose", "--explode"])
+        SomeCommand().main(["--verbose", "--debug", "--explode"])
 
 @test
 def console_operations():
@@ -137,7 +138,7 @@ def dir_operations():
         result = find(test_dir)
         assert result == [test_file_1, test_file_2], (result, [test_file_1, test_file_2])
 
-        result = find(test_dir, "*-file-1")
+        result = find(test_dir, include="*-file-1")
         assert result == [test_file_1], (result, [test_file_1])
 
         result = find(test_dir, exclude="*-file-1")
@@ -145,6 +146,11 @@ def dir_operations():
 
         with working_dir():
             result = find()
+            assert result == [], result
+
+            make_dir("subdir")
+
+            result = find("./subdir")
             assert result == [], result
 
     with working_dir():
@@ -162,7 +168,7 @@ def dir_operations():
 @test
 def env_operations():
     result = join_path_var("a", "b", "c", "a")
-    assert result == "a:b:c", result
+    assert result == _os.pathsep.join(("a", "b", "c")), result
 
     curr_dir = get_current_dir()
 
@@ -170,12 +176,12 @@ def env_operations():
         assert get_current_dir() == curr_dir, (get_current_dir(), curr_dir)
 
     result = get_home_dir()
-    assert result == ENV["HOME"], result
+    assert result == _os.path.expanduser("~"), (result, _os.path.expanduser("~"))
 
     result = get_home_dir("alice")
     assert result.endswith("alice"), result
 
-    user = _pwd.getpwuid(_os.getuid())[0]
+    user = _getpass.getuser()
     result = get_user()
     assert result == user, (result, user)
 
@@ -330,10 +336,16 @@ def http_operations():
             self.server.serve_forever()
 
     host, port = "localhost", get_random_port()
-    url = "http://{0}:{1}".format(host, port)
-    server = _http.HTTPServer((host, port), Handler)
-    server_thread = ServerThread(server)
+    url = "http://{}:{}".format(host, port)
 
+    try:
+        server = _http.HTTPServer((host, port), Handler)
+    except (OSError, PermissionError): # pragma: nocover
+        # Try one more time
+        port = get_random_port()
+        server = _http.HTTPServer((host, port), Handler)
+
+    server_thread = ServerThread(server)
     server_thread.start()
 
     try:
@@ -409,6 +421,9 @@ def io_operations():
             "alpha\n",
             "beta\n",
             "gamma\n",
+            "chi\n",
+            "psi\n",
+            "omega\n",
         ]
 
         file_b = write_lines("b", input_lines)
@@ -417,7 +432,7 @@ def io_operations():
         assert input_lines == output_lines, (input_lines, output_lines)
 
         pre_lines = ["pre-alpha\n"]
-        post_lines = ["post-gamma\n"]
+        post_lines = ["post-omega\n"]
 
         prepend_lines(file_b, pre_lines)
         append_lines(file_b, post_lines)
@@ -426,16 +441,22 @@ def io_operations():
         tailed_lines = tail_lines(file_b, 1)
 
         assert output_lines[0] == pre_lines[0], (output_lines[0], pre_lines[0])
-        assert output_lines[4] == post_lines[0], (output_lines[4], post_lines[0])
+        assert output_lines[-1] == post_lines[0], (output_lines[-1], post_lines[0])
         assert tailed_lines[0] == post_lines[0], (tailed_lines[0], post_lines[0])
 
         file_c = touch("c")
         assert is_file(file_c), file_c
 
         file_d = write("d", "front@middle@@middle@back")
-        replace_in_file(file_d, "@middle@", "M", count=1)
-        result = read(file_d)
+        path = replace_in_file(file_d, "@middle@", "M", count=1)
+        result = read(path)
         assert result == "frontM@middle@back", result
+
+        file_e = write("e", "123")
+        file_f = write("f", "456")
+        path = concatenate("g", (file_e, "not-there", file_f))
+        result = read(path)
+        assert result == "123456", result
 
 @test
 def iterable_operations():
@@ -476,7 +497,7 @@ def link_operations():
         with working_dir("another-dir"):
             link = make_link("a-link", path)
             linked_path = read_link(link)
-            assert linked_path == path, (linked_path, path)
+            assert linked_path.endswith(path), (linked_path, path)
 
 @test
 def logging_operations():
@@ -485,7 +506,7 @@ def logging_operations():
     notice("Take a look!")
     notice(123)
     debug("By the way")
-    debug("abc{0}{1}{2}", 1, 2, 3)
+    debug("abc{}{}{}", 1, 2, 3)
 
     with expect_exception(RuntimeError):
         fail(RuntimeError("Error!"))
@@ -506,17 +527,23 @@ def logging_operations():
 
 @test
 def path_operations():
+    abspath = _os.path.abspath
+    normpath = _os.path.normpath
+
     with working_dir("/"):
-        curr_dir = get_current_dir()
-        assert curr_dir == "/", curr_dir
+        result = get_current_dir()
+        expect = abspath(_os.sep)
+        assert result == expect, (result, expect)
 
         path = "a/b/c"
         result = get_absolute_path(path)
-        assert result == join(curr_dir, path), result
+        expect = join(get_current_dir(), path)
+        assert result == expect, (result, expect)
 
     path = "/x/y/z"
     result = get_absolute_path(path)
-    assert result == path, result
+    expect = abspath(path)
+    assert result == expect, (result, expect)
 
     path = "/x/y/z"
     assert is_absolute(path)
@@ -526,23 +553,28 @@ def path_operations():
 
     path = "a//b/../c/"
     result = normalize_path(path)
-    assert result == "a/c", result
+    expect = normpath("a/c")
+    assert result == expect, (result, expect)
 
     path = "/a/../c"
     result = get_real_path(path)
-    assert result == "/c", result
+    expect = abspath("/c")
+    assert result == expect, (result, expect)
 
-    path = "/a/b"
+    path = abspath("/a/b")
     result = get_relative_path(path, "/a/c")
-    assert result == "../b", result
+    expect = normpath("../b")
+    assert result == expect, (result, expect)
 
-    path = "/a/b"
+    path = abspath("/a/b")
     result = get_file_url(path)
-    assert result == "file:/a/b", result
+    expect = "file:{}".format(path)
+    assert result == expect, (result, expect)
 
     with working_dir():
         result = get_file_url("afile")
-        assert result == "file:{0}/afile".format(get_current_dir()), result
+        expect = join(get_file_url(get_current_dir()), "afile")
+        assert result == expect, (result, expect)
 
     path = "/alpha/beta.ext"
     path_split = "/alpha", "beta.ext"
@@ -550,28 +582,36 @@ def path_operations():
     name_split_extension = "beta", ".ext"
 
     result = join(*path_split)
-    assert result == path, result
+    expect = normpath(path)
+    assert result == expect, (result, expect)
 
     result = split(path)
-    assert result == path_split, result
+    expect = normpath(path_split[0]), normpath(path_split[1])
+    assert result == expect, (result, expect)
 
     result = split_extension(path)
-    assert result == path_split_extension, result
+    expect = normpath(path_split_extension[0]), normpath(path_split_extension[1])
+    assert result == expect, (result, expect)
 
     result = get_parent_dir(path)
-    assert result == path_split[0], result
+    expect = normpath(path_split[0])
+    assert result == expect, (result, expect)
 
     result = get_base_name(path)
-    assert result == path_split[1], result
+    expect = normpath(path_split[1])
+    assert result == expect, (result, expect)
 
     result = get_name_stem(path)
-    assert result == name_split_extension[0], result
+    expect = normpath(name_split_extension[0])
+    assert result == expect, (result, expect)
 
     result = get_name_stem("alpha.tar.gz")
-    assert result == "alpha", result
+    expect = "alpha"
+    assert result == expect, (result, expect)
 
     result = get_name_extension(path)
-    assert result == name_split_extension[1], result
+    expect = normpath(name_split_extension[1])
+    assert result == expect, (result, expect)
 
     with working_dir():
         touch("adir/afile")
@@ -598,8 +638,9 @@ def path_operations():
 
         await_exists("adir/afile")
 
-        with expect_timeout():
-            await_exists("adir/notafile", timeout=TINY_INTERVAL)
+        if not WINDOWS:
+            with expect_timeout():
+                await_exists("adir/notafile", timeout=TINY_INTERVAL)
 
 @test
 def port_operations():
@@ -610,7 +651,13 @@ def port_operations():
     server_socket = _socket.socket(_socket.AF_INET, _socket.SOCK_STREAM)
 
     try:
-        server_socket.bind(("localhost", server_port))
+        try:
+            server_socket.bind(("localhost", server_port))
+        except (OSError, PermissionError): # pragma: nocover
+            # Try one more time
+            server_port = get_random_port()
+            server_socket.bind(("localhost", server_port))
+
         server_socket.listen(5)
 
         await_port(server_port)
@@ -618,13 +665,17 @@ def port_operations():
 
         check_port(server_port)
 
-        with expect_error():
-            get_random_port(min=server_port, max=server_port)
+        # Non-Linux platforms don't seem to produce the expected
+        # error.
+        if LINUX:
+            with expect_error():
+                get_random_port(min=server_port, max=server_port)
     finally:
         server_socket.close()
 
-    with expect_timeout():
-        await_port(get_random_port(), timeout=TINY_INTERVAL)
+    if not WINDOWS:
+        with expect_timeout():
+            await_port(get_random_port(), timeout=TINY_INTERVAL)
 
 @test
 def process_operations():
@@ -662,18 +713,20 @@ def process_operations():
     with expect_error():
         run("cat /whoa/not/really", stash=True)
 
-    result = call("echo hello")
-    assert result == "hello\n", result
+    result = call("echo hello").strip()
+    expect = "hello"
+    assert result == expect, (result, expect)
 
-    result = call("echo hello | cat", shell=True)
-    assert result == "hello\n", result
+    result = call("echo hello | cat", shell=True).strip()
+    expect = "hello"
+    assert result == expect, (result, expect)
 
     with expect_error():
         call("cat /whoa/not/really")
 
-    if PYTHON3:
-        proc = start("sleep 10")
+    proc = start("sleep 10")
 
+    if not WINDOWS:
         with expect_timeout():
             wait(proc, timeout=TINY_INTERVAL)
 
@@ -847,42 +900,47 @@ def temp_operations():
 @test
 def test_operations():
     with test_project():
-        with working_module_path("python"):
+        with working_module_path("src"):
             import chucker
-            import chucker_tests
+            import chucker.tests
 
-            print_tests(chucker_tests)
+            print_tests(chucker.tests)
 
             for verbose in (False, True):
-                run_tests(chucker_tests, verbose=verbose)
-                run_tests(chucker_tests, exclude="*hello*", verbose=verbose)
-
+                # Module 'chucker' has no tests
                 with expect_error():
                     run_tests(chucker, verbose=verbose)
 
-                with expect_error():
-                    run_tests(chucker_tests, enable="*badbye*", verbose=verbose)
+                run_tests(chucker.tests, verbose=verbose)
+                run_tests(chucker.tests, exclude="*hello*", verbose=verbose)
+                run_tests(chucker.tests, enable="skipped", verbose=verbose)
 
                 with expect_error():
-                    run_tests(chucker_tests, enable="*badbye*", fail_fast=True, verbose=verbose)
+                    run_tests(chucker.tests, enable="skipped", unskip="*skipped*", verbose=verbose)
+
+                with expect_error():
+                    run_tests(chucker.tests, enable="*badbye*", verbose=verbose)
+
+                with expect_error():
+                    run_tests(chucker.tests, enable="*badbye*", fail_fast=True, verbose=verbose)
 
                 with expect_exception(KeyboardInterrupt):
-                    run_tests(chucker_tests, enable="test_keyboard_interrupt", verbose=verbose)
+                    run_tests(chucker.tests, enable="keyboard-interrupt", verbose=verbose)
 
                 with expect_error():
-                    run_tests(chucker_tests, enable="test_timeout", verbose=verbose)
+                    run_tests(chucker.tests, enable="timeout", verbose=verbose)
 
                 with expect_error():
-                    run_tests(chucker_tests, enable="test_process_error", verbose=verbose)
+                    run_tests(chucker.tests, enable="process-error", verbose=verbose)
 
                 with expect_error():
-                    run_tests(chucker_tests, enable="test_system_exit", verbose=verbose)
+                    run_tests(chucker.tests, enable="system-exit", verbose=verbose)
 
             with expect_system_exit():
                 PlanoTestCommand().main(["--module", "nosuchmodule"])
 
             def run_command(*args):
-                PlanoTestCommand(chucker_tests).main(args)
+                PlanoTestCommand(chucker.tests).main(args)
 
             run_command("--verbose")
             run_command("--list")
@@ -937,9 +995,10 @@ def time_operations():
 
     assert timer.elapsed_time > TINY_INTERVAL
 
-    with expect_timeout():
-        with Timer(timeout=TINY_INTERVAL) as timer:
-            sleep(10)
+    if not WINDOWS:
+        with expect_timeout():
+            with Timer(timeout=TINY_INTERVAL) as timer:
+                sleep(10)
 
 @test
 def unique_id_operations():
@@ -980,10 +1039,10 @@ def value_operations():
     result = format_empty((1,), "[nothing]")
     assert result == (1,), result
 
-    result = format_not_empty("abc", "[{0}]")
+    result = format_not_empty("abc", "[{}]")
     assert result == "[abc]", result
 
-    result = format_not_empty({}, "[{0}]")
+    result = format_not_empty({}, "[{}]")
     assert result == {}, result
 
     result = format_repr(Namespace(a=1, b=2), limit=1)
@@ -1003,7 +1062,7 @@ def value_operations():
 def yaml_operations():
     try:
         import yaml as _yaml
-    except ImportError:
+    except ImportError: # pragma: nocover
         raise PlanoTestSkipped("PyYAML is not available")
 
     with working_dir():
@@ -1023,22 +1082,31 @@ def yaml_operations():
         assert input_data == parsed_data, (input_data, parsed_data)
         assert yaml == emitted_yaml, (yaml, emitted_yaml)
 
+@command
+def prancer():
+    notice("Base prancer")
+
+@command
+def vixen():
+    prancer()
+
 @test
 def plano_command():
-    if PYTHON2: # pragma: nocover
-        raise PlanoTestSkipped("The plano command is not supported on Python 2")
-
     with working_dir():
         PlanoCommand().main([])
 
+    PlanoCommand(_sys.modules[__name__]).main([])
+
+    PlanoCommand().main(["-m", "plano.test"])
+
+    with expect_system_exit():
+        PlanoCommand().main(["-m", "nosuchmodule"])
+
     with working_dir():
-        write("Planofile", "garbage")
+        write(".plano.py", "garbage")
 
         with expect_system_exit():
             PlanoCommand().main([])
-
-    with expect_system_exit():
-        PlanoCommand("no-such-file").main([])
 
     with expect_system_exit():
         PlanoCommand().main(["-f", "no-such-file"])
@@ -1051,13 +1119,6 @@ def plano_command():
         run_command("--help")
         run_command("--quiet")
         run_command("--init-only")
-
-        run_command("build")
-        run_command("install")
-        run_command("clean")
-
-        with expect_system_exit():
-            run_command("build", "--help")
 
         with expect_system_exit():
             run_command("no-such-command")
@@ -1077,6 +1138,8 @@ def plano_command():
             run_command("echo", "Hello", "--trouble")
 
         run_command("echo", "Hello", "--count", "5")
+
+        run_command("echoecho", "Greetings")
 
         with expect_system_exit():
             run_command("echo", "Hello", "--count", "not-an-int")
@@ -1105,27 +1168,46 @@ def plano_command():
         result = read_json("balderdash.json")
         assert result == ["bunk", "malarkey", "bollocks"], result
 
-@test
-def plano_shell_command():
-    python_dir = get_absolute_path("python")
+        run_command("splasher,balderdash", "claptrap")
+        result = read_json("splasher.json")
+        assert result == [1], result
+        result = read_json("balderdash.json")
+        assert result == ["claptrap", "malarkey", "rubbish"], result
 
-    with working_dir():
-        write("script1", "garbage")
+        with expect_system_exit():
+            run_command("no-such-command,splasher")
 
-        with expect_exception(NameError):
-            PlanoShellCommand().main(["script1"])
+        with expect_system_exit():
+            run_command("splasher,no-such-command-nope")
 
-        write("script2", "print_env()")
+        run_command("dasher", "alpha", "--beta", "123")
 
-        PlanoShellCommand().main(["script2"])
+        # Gamma is an unexpected arg
+        with expect_system_exit():
+            run_command("dasher", "alpha", "--gamma", "123")
 
-        PlanoShellCommand().main(["--command", "print_env()"])
+        # Args after "xyz" are extra passthrough args
+        run_command("dancer", "gamma", "--omega", "xyz", "extra1", "--extra2", "extra3")
+        result = read_json("dancer.json")
+        assert result == ["extra1", "--extra2", "extra3"], result
 
-        write("command", "from plano import *; PlanoShellCommand().main()")
+        # Ensure indirect calls (through parent commands) are specialized
+        run_command("vixen")
+        assert exists("prancer.json")
 
-        with working_env(PYTHONPATH=python_dir):
-            run("{0} command".format(_sys.executable), input="cprint('Hi!', color='green'); exit()")
-            run("echo \"cprint('Bi!', color='red')\" | {0} command -".format(_sys.executable), shell=True)
+        with expect_system_exit():
+            run_command("no-parent")
 
-    with expect_system_exit():
-        PlanoShellCommand().main(["no-such-file"])
+        run_command("feta", "--spinach", "oregano")
+        result = read_json("feta.json")
+        assert result == "oregano"
+
+        run_command("invisible")
+        result = read_json("invisible.json")
+        assert result == "nothing"
+
+def main():
+    PlanoTestCommand(_sys.modules[__name__]).main()
+
+if __name__ == "__main__": # pragma: nocover
+    main()

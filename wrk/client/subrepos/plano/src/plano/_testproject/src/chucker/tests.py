@@ -17,14 +17,43 @@
 # under the License.
 #
 
-FROM centos:7
+from plano import *
 
-RUN yum -q -y update && yum -q clean all
+@test
+def hello():
+    print("Hello")
 
-RUN yum -y install epel-release
+@test
+async def hello_async():
+    print("Hello")
 
-RUN yum -y install make python2-pyyaml python36 python36-PyYAML
+@test
+def goodbye():
+    print("Goodbye")
 
-COPY . /root/plano
-WORKDIR /root/plano
-CMD ["make", "clean", "test", "install", "PREFIX=/usr/local"]
+@test(disabled=True)
+def badbye():
+    print("Badbye")
+    assert False
+
+@test(disabled=True)
+def skipped():
+    skip_test("Skipped")
+    assert False
+
+@test(disabled=True)
+def keyboard_interrupt():
+    raise KeyboardInterrupt()
+
+@test(disabled=True, timeout=0.05)
+def timeout():
+    sleep(10, quiet=True)
+    assert False
+
+@test(disabled=True)
+def process_error():
+    run("expr 1 / 0")
+
+@test(disabled=True)
+def system_exit_():
+    exit(1)
