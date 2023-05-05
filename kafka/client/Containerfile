@@ -1,0 +1,7 @@
+FROM registry.access.redhat.com/ubi9/ubi-minimal
+
+RUN microdnf -y install java-17-openjdk-headless && microdnf clean all
+
+COPY target/ /app/target
+
+ENTRYPOINT ["java", "-jar", "/app/target/client-1.0.0-SNAPSHOT-jar-with-dependencies.jar", "10", "2"]
