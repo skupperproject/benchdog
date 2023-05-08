@@ -1,7 +1,13 @@
 FROM registry.access.redhat.com/ubi9/ubi-minimal
 
-RUN microdnf -y install java-17-openjdk-headless && microdnf clean all
+RUN microdnf -y install java-17-openjdk-headless pip && microdnf clean all
 
+RUN pip install pandas
+
+COPY python/ /app/python
+COPY subrepos/ /app/subrepos
 COPY target/ /app/target
 
-ENTRYPOINT ["java", "-jar", "/app/target/client-1.0.0-SNAPSHOT-jar-with-dependencies.jar", "10", "2"]
+WORKDIR /app
+
+CMD ["python", "python/main.py"]

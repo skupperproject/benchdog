@@ -6,8 +6,8 @@ from plano import *
 def load_config(default_port=8080):
     return Namespace(host=ENV.get("BENCHDOG_HOST", "localhost"),
                      port=ENV.get("BENCHDOG_PORT", default_port),
-                     duration=int(ENV.get("BENCHDOG_DURATION", 60)),
-                     iterations=int(ENV.get("BENCHDOG_ITERATIONS", 5)))
+                     duration=int(ENV.get("BENCHDOG_DURATION", 5)), # 60)),
+                     iterations=int(ENV.get("BENCHDOG_ITERATIONS", 3))) # 5)))
 
 def print_config(config):
     print()
