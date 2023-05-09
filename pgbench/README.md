@@ -20,6 +20,10 @@ command removes the OpenShift prohibition:
 
     oc adm policy add-scc-to-group anyuid system:authenticated
 
+Note that you need this permission for the server and client images,
+since they use both use the standardard PostgreSQL container as a
+base.
+
 ## Running the client in Kubernetes
 
 Client namespace:
