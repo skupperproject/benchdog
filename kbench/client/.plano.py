@@ -1,5 +1,7 @@
 from plano import *
 
+image_tag = "quay.io/ssorj/benchdog-kbench-client"
+
 @command
 def build():
     run("mvn package")
@@ -14,8 +16,6 @@ def clean():
     run("mvn clean")
     remove(list_dir(".", "kbench.log*"))
     remove("__pycache__")
-
-image_tag = "quay.io/ssorj/benchdog-kbench-client"
 
 @command
 def build_image():
