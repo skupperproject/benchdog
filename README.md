@@ -12,8 +12,9 @@ Skupper-specific about them.
 ## Overview
 
 Each benchmark has a server container and a client container.  All
-tests run with a single server instance.  The number of clients varies
-across three scenarios: 1 client, 10 clients, and 100 clients.
+tests run with a single server instance.  The number of client jobs
+varies across three scenarios: 1 job, 10 jobs, and 100 jobs.  A job
+typically corresponds to a client connection.
 
 For each scenario, we perform a certain number of iterations (default
 5).  For our results, we keep only the "middlest" value, by
@@ -33,6 +34,7 @@ Sample output:
 
 ## Benchmarks
 
+- [**kbench**](kbench) - Kafka
 - [**pgbench**](pgbench) - PostgreSQL
 - [**wrk**](wrk) - HTTP/1.1 and Nginx
 
@@ -41,10 +43,11 @@ Sample output:
 The benchmark client is configured using these environment variables:
 
 - **BENCHDOG_HOST** - The host to connect to (default localhost)
-- **BENCHDOG_PORT** - The port to connect to (the default is benchmark-specific)
-- **BENCHDOG_TLS** - Set to `1` to connect using TLS (TLS is off by default)
+- **BENCHDOG_PORT** - The port to connect to (the default is benchmark specific)
 - **BENCHDOG_DURATION** - The time in seconds to run the test (default 60)
 - **BENCHDOG_ITERATIONS** - The number of repeated runs for each scenario (default 5)
+
+<!-- - **BENCHDOG_TLS** - Set to `1` to connect using TLS (TLS is off by default) -->
 
 ## Testing with Skupper
 
@@ -56,7 +59,7 @@ server on Kubernetes.
 Setting the CPU limit implicitly sets the requested CPU to the same
 value.
 
-    skupper init --routers 2 --router-cpu-limit 0.5
+    skupper init --router-cpu-limit 0.5
 
 ### Monitoring CPU and memory usage
 

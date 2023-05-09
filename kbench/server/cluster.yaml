@@ -11,6 +11,10 @@ spec:
         port: 9092
         type: internal
         tls: false
+        configuration:
+          brokers:
+            - broker: 0
+              advertisedHost: kbench-kafka-0.kbench-kafka-brokers
       - name: tls
         port: 9093
         type: internal
@@ -31,3 +35,16 @@ spec:
   entityOperator:
     topicOperator: {}
     userOperator: {}
+---
+apiVersion: kafka.strimzi.io/v1beta2
+kind: KafkaTopic
+metadata:
+  name: kbench
+  labels:
+    strimzi.io/cluster: kbench
+spec:
+  partitions: 1
+  replicas: 1
+  config:
+    retention.ms: 1000
+    segment.bytes: 104857600

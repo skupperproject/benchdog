@@ -1,9 +1,10 @@
 # Benchdog: wrk
 
-A containerized HTTP/1.1 benchmark tool based on
-[wrk](https://github.com/wg/wrk) and [ngingx](https://nginx.org/).
+A containerized HTTP/1.1 benchmark tool based on [wrk][wkr] and
+[ngingx][nginx].
 
-An HTTP/1.1 benchmark test
+[wrk]: https://github.com/wg/wrk
+[nginx]: https://nginx.org/
 
 ## Running the server in Kubernetes
 
@@ -43,5 +44,6 @@ Client namespace:
 
     kubectl run -it --rm --env BENCHDOG_HOST=wrk-server --image quay.io/ssorj/benchdog-wrk-client wrk-client
 
-For more information, see [Getting started with
-Skupper](https://skupper.io/start/index.html).
+For more information, see [Getting started with Skupper][start].
+
+[start]: https://skupper.io/start/index.html
