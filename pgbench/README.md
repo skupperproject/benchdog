@@ -1,7 +1,8 @@
 # Benchdog: pgbench
 
-A containerized PostgreSQL benchmark tool based on
-[pgbench](https://github.com/ssorj/benchdog/blob/main/pgbench).
+A containerized PostgreSQL benchmark tool based on [pgbench][pgbench].
+
+[pgbench]: https://github.com/ssorj/benchdog/blob/main/pgbench
 
 ## Running the server in Kubernetes
 
@@ -48,6 +49,3 @@ can run the client with `--env BENCHDOG_HOST=pgbench-server`.
 Client namespace:
 
     kubectl run -it --rm --env BENCHDOG_HOST=pgbench-server --image quay.io/ssorj/benchdog-pgbench-client pgbench-client
-
-For more information, see [Getting started with
-Skupper](https://skupper.io/start/index.html).

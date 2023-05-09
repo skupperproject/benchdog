@@ -43,7 +43,3 @@ run the client with `--env BENCHDOG_HOST=wrk-server`.
 Client namespace:
 
     kubectl run -it --rm --env BENCHDOG_HOST=wrk-server --image quay.io/ssorj/benchdog-wrk-client wrk-client
-
-For more information, see [Getting started with Skupper][start].
-
-[start]: https://skupper.io/start/index.html

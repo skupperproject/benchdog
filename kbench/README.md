@@ -52,9 +52,3 @@ Client namespace:
 ## Cleaning up
 
     kubectl delete -f server/strimzi.yaml
-
-## More information
-
-For more information, see [Getting started with Skupper][start].
-
-[start]: https://skupper.io/start/index.html
