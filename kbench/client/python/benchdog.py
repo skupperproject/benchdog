@@ -49,19 +49,7 @@ def report(config, data, scenario_text=None, job_text=None, operation_text=None)
 
     results = list()
 
-    # for scenario_data in data.values():
-    #     # Find the middlest result by throughput
-
-    #     try:
-    #         throughputs = [x["operations"] / x["duration"] for x in scenario_data]
-    #     except KeyError:
-    #         continue
-
-    #     index = throughputs.index(_statistics.median_low(throughputs))
-
-    #     results.append(scenario_data[index])
-
-    # Find the middlest result by average latency
+    # Find the middlest result by average latency for each scenario
 
     for scenario_data in data.values():
         try:
