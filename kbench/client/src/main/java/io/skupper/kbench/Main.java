@@ -60,21 +60,20 @@ public class Main {
             consumers.add(new ConsumerThread(i, consumerConfig));
         }
 
-        producer.start();
-
         for (ConsumerThread consumer : consumers) {
             consumer.start();
         }
 
+        producer.start();
+
         Thread.sleep(duration * 1000);
 
         producer.terminate();
+        producer.join();
 
         for (ConsumerThread consumer : consumers) {
             consumer.terminate();
         }
-
-        producer.join();
 
         for (ConsumerThread consumer : consumers) {
             consumer.join();

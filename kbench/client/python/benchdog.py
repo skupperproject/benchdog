@@ -49,15 +49,27 @@ def report(config, data, scenario_text=None, job_text=None, operation_text=None)
 
     results = list()
 
-    for scenario_data in data.values():
-        # Find the middlest result by throughput
+    # for scenario_data in data.values():
+    #     # Find the middlest result by throughput
 
+    #     try:
+    #         throughputs = [x["operations"] / x["duration"] for x in scenario_data]
+    #     except KeyError:
+    #         continue
+
+    #     index = throughputs.index(_statistics.median_low(throughputs))
+
+    #     results.append(scenario_data[index])
+
+    # Find the middlest result by average latency
+
+    for scenario_data in data.values():
         try:
-            throughputs = [x["operations"] / x["duration"] for x in scenario_data]
+            latency_averages = [x["latency"]["average"] for x in scenario_data]
         except KeyError:
             continue
 
-        index = throughputs.index(_statistics.median_low(throughputs))
+        index = latency_averages.index(_statistics.median_low(latency_averages))
 
         results.append(scenario_data[index])
 
@@ -88,11 +100,11 @@ def report(config, data, scenario_text=None, job_text=None, operation_text=None)
     if job_text is not None:
         print(job_text)
 
-    print("Throughput is the number of operations per second (ops/s).")
-
     if operation_text is not None:
         print(operation_text)
 
+    print("Throughput is the number of operations per second (ops/s).")
+
     print("Latency is the duration of an operation in milliseconds (ms).")
-    print("High and low results from repeated runs are discarded.")
+    print("High and low results (by average latency) from repeated runs are discarded.")
     print()
