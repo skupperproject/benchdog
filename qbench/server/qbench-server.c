@@ -38,12 +38,41 @@ typedef struct worker {
     int credit_window;
 } worker_t;
 
+static void fail(char* message) {
+    fprintf(stderr, "FAILED: %s\n", message);
+    abort();
+}
+
+static ssize_t message_encode(pn_message_t* message, char* buffer, size_t size) {
+    size_t inout_size = size;
+    int err = pn_message_encode(message, buffer, &inout_size);
+
+    if (err) return err;
+
+    return inout_size;
+}
+
 static int message_send(pn_message_t* message, pn_delivery_t* delivery, pn_rwbytes_t* buffer) {
     pn_link_t* sender = pn_delivery_link(delivery);
+    size_t size = buffer->size;
     ssize_t ret;
 
-    ret = pn_message_encode2(message, buffer);
-    if (ret < 0) return ret;
+    while (true) {
+        ret = message_encode(message, buffer->start, buffer->size);
+
+        if (ret == PN_OVERFLOW) {
+            buffer->size *= 2;
+            buffer->start = (char*) realloc(buffer->start, buffer->size);
+
+            if (!buffer->start) return PN_OUT_OF_MEMORY;
+
+            continue;
+        }
+
+        if (ret < 0) return ret;
+
+        break;
+    }
 
     ret = pn_link_send(sender, buffer->start, ret);
     if (ret < 0) return ret;
@@ -64,6 +93,7 @@ static int message_receive(pn_message_t* message, pn_delivery_t* delivery, pn_rw
     }
 
     ret = pn_link_recv(receiver, buffer->start, size);
+    printf("ret = %d\n", ret);
     if (ret < 0) return ret;
     if (ret != size) return PN_ERR;
 
@@ -121,8 +151,7 @@ static void check_condition(pn_event_t* event, pn_condition_t* condition) {
     }
 }
 
-// XXX return int error and pass running by ref
-static bool worker_handle_event(worker_t* worker, pn_event_t* event) {
+static int worker_handle_event(worker_t* worker, pn_event_t* event, bool* running) {
     switch (pn_event_type(event)) {
     case PN_LISTENER_ACCEPT: {
         pn_listener_t* listener = pn_event_listener(event);
@@ -164,7 +193,7 @@ static bool worker_handle_event(worker_t* worker, pn_event_t* event) {
             pn_link_open(link);
             pn_link_flow(link, worker->credit_window);
         } else {
-            abort();
+            fail("fail");
         }
 
         break;
@@ -203,9 +232,9 @@ static bool worker_handle_event(worker_t* worker, pn_event_t* event) {
 
             // Message received
             err = worker_handle_delivery(worker, event);
-            if (err) abort();
+            if (err) return err;
         } else {
-            abort();
+            fail("fail");
         }
 
         break;
@@ -241,23 +270,27 @@ static bool worker_handle_event(worker_t* worker, pn_event_t* event) {
     case PN_PROACTOR_INTERRUPT: {
         // Interrupt the next thread
         pn_proactor_interrupt(worker->proactor);
-        return false;
+        *running = false;
+        return 0;
     }
     }
 
-    return true;
+    return 0;
 }
 
 static void worker_init(worker_t* worker, pn_proactor_t* proactor, int credit_window) {
-    pn_rwbytes_t* buf = (pn_rwbytes_t*) malloc(sizeof(pn_rwbytes_t));
+    pn_rwbytes_t* buffer = (pn_rwbytes_t*) malloc(sizeof(pn_rwbytes_t));
 
-    *buf = (pn_rwbytes_t) {0};
+    *buffer = (pn_rwbytes_t) {
+        .size = 64,
+        .start = malloc(64),
+    };
 
     *worker = (worker_t) {
         .proactor = proactor,
         .request_message = pn_message(),
         .response_message = pn_message(),
-        .message_buffer = buf,
+        .message_buffer = buffer,
         .credit_window = credit_window,
     };
 }
@@ -277,9 +310,11 @@ static void* worker_run(void* data) {
     while (running) {
         pn_event_batch_t* batch = pn_proactor_wait(worker->proactor);
         pn_event_t* event;
+        int err;
 
-        while (running && (event = pn_event_batch_next(batch))) {
-            running = worker_handle_event(worker, event);
+        while ((event = pn_event_batch_next(batch))) {
+            err = worker_handle_event(worker, event, &running);
+            if (err) fail("worker_handle_event"); // XXX Gentler
         }
 
         // API: Should be pn_event_batch_done(batch) IMO.

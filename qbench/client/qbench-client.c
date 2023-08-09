@@ -39,12 +39,41 @@ typedef struct worker {
     int credit_window;
 } worker_t;
 
+static void fail(char* message) {
+    fprintf(stderr, "FAILED: %s\n", message);
+    abort();
+}
+
+static ssize_t message_encode(pn_message_t* message, char* buffer, size_t size) {
+    size_t inout_size = size;
+    int err = pn_message_encode(message, buffer, &inout_size);
+
+    if (err) return err;
+
+    return inout_size;
+}
+
 static int message_send(pn_message_t* message, pn_delivery_t* delivery, pn_rwbytes_t* buffer) {
     pn_link_t* sender = pn_delivery_link(delivery);
+    size_t size = buffer->size;
     ssize_t ret;
 
-    ret = pn_message_encode2(message, buffer);
-    if (ret < 0) return ret;
+    while (true) {
+        ret = message_encode(message, buffer->start, buffer->size);
+
+        if (ret == PN_OVERFLOW) {
+            buffer->size *= 2;
+            buffer->start = (char*) realloc(buffer->start, buffer->size);
+
+            if (!buffer->start) return PN_OUT_OF_MEMORY;
+
+            continue;
+        }
+
+        if (ret < 0) return ret;
+
+        break;
+    }
 
     ret = pn_link_send(sender, buffer->start, ret);
     if (ret < 0) return ret;
@@ -157,7 +186,7 @@ static int worker_handle_event(worker_t* worker, pn_event_t* event, bool* runnin
         pn_link_t* sender = pn_event_link(event);
         int err;
 
-        if (pn_link_is_receiver(sender)) abort();
+        if (pn_link_is_receiver(sender)) fail("link is receiver");
 
         while (pn_link_credit(sender) > 0) {
             err = worker_send_message(worker, sender);
@@ -182,7 +211,7 @@ static int worker_handle_event(worker_t* worker, pn_event_t* event, bool* runnin
             err = worker_handle_delivery(worker, delivery);
             if (err) return err;
         } else {
-            abort();
+            fail("fail");
         }
 
         break;
@@ -223,15 +252,18 @@ static int worker_handle_event(worker_t* worker, pn_event_t* event, bool* runnin
 }
 
 static void worker_init(worker_t* worker, pn_proactor_t* proactor, int credit_window) {
-    pn_rwbytes_t* buf = (pn_rwbytes_t*) malloc(sizeof(pn_rwbytes_t));
+    pn_rwbytes_t* buffer = (pn_rwbytes_t*) malloc(sizeof(pn_rwbytes_t));
 
-    *buf = (pn_rwbytes_t) {0};
+    *buffer = (pn_rwbytes_t) {
+        .size = 64,
+        .start = malloc(64),
+    };
 
     *worker = (worker_t) {
         .proactor = proactor,
         .request_message = pn_message(),
         .response_message = pn_message(),
-        .message_buffer = buf,
+        .message_buffer = buffer,
         .credit_window = credit_window,
     };
 }
@@ -251,7 +283,7 @@ static void* worker_run(void* data) {
     snprintf(log_file_name, 256, "qbench.log.0");
 
     worker->log_file = fopen(log_file_name, "w");
-    if (!worker->log_file) abort();
+    if (!worker->log_file) fail("fopen");
 
     char addr[256];
     pn_connection_t* connection = pn_connection();
@@ -266,9 +298,9 @@ static void* worker_run(void* data) {
         pn_event_t* event;
         int err;
 
-        while (running && (event = pn_event_batch_next(batch))) {
+        while ((event = pn_event_batch_next(batch))) {
             err = worker_handle_event(worker, event, &running);
-            if (err) abort(); // XXX Gentler
+            if (err) fail("worker_handle_event"); // XXX Gentler
         }
 
         pn_proactor_done(worker->proactor, batch);
