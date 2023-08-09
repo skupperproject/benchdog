@@ -28,22 +28,16 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-// XXX for sleep
-#include <unistd.h>
-
 typedef struct worker {
     pn_proactor_t* proactor;
     pn_connection_t* connection;
     pn_message_t* request_message;
     pn_message_t* response_message;
     pn_rwbytes_t* message_buffer;
+    FILE* log_file;
     long sender_sequence;
     int credit_window;
 } worker_t;
-
-static pn_proactor_t* proactor = NULL;
-
-// make_delivery
 
 static int message_send(pn_message_t* message, pn_delivery_t* delivery, pn_rwbytes_t* buffer) {
     pn_link_t* sender = pn_delivery_link(delivery);
@@ -95,8 +89,7 @@ static int worker_send_message(worker_t* worker, pn_link_t* sender) {
     // pn_data_t* body = pn_message_body(worker->request_message);
     // pn_data_put_string(body, pn_data_get_string(request_body));
 
-    pn_delivery_tag_t tag = pn_dtag((char*) &worker->sender_sequence, sizeof(worker->sender_sequence));
-    pn_delivery_t* delivery = pn_delivery(sender, tag);
+    pn_delivery_t* delivery = pn_delivery(sender, pn_bytes_null);
 
     err = message_send(worker->request_message, delivery, worker->message_buffer);
     if (err) return err;
@@ -107,6 +100,19 @@ static int worker_send_message(worker_t* worker, pn_link_t* sender) {
 }
 
 static int worker_handle_delivery(worker_t* worker, pn_delivery_t* delivery) {
+    pn_link_t* receiver = pn_delivery_link(delivery);
+    int err;
+
+    err = message_receive(worker->response_message, delivery, worker->message_buffer);
+    if (err) return err;
+
+    fprintf(worker->log_file, "1,1\n"); // XXX
+
+    pn_delivery_update(delivery, PN_ACCEPTED);
+    pn_delivery_settle(delivery);
+
+    pn_link_flow(receiver, worker->credit_window - pn_link_credit(receiver));
+
     return 0;
 }
 
@@ -147,23 +153,6 @@ static int worker_handle_event(worker_t* worker, pn_event_t* event, bool* runnin
 
         break;
     }
-    // case PN_CONNECTION_REMOTE_OPEN: {
-    //     pn_connection_open(pn_event_connection(event));
-    //     break;
-    // }
-    // case PN_SESSION_REMOTE_OPEN: {
-    //     pn_session_open(pn_event_session(event));
-    //     break;
-    // }
-    // case PN_LINK_REMOTE_OPEN: {
-    //     pn_link_t* link = pn_event_link(event);
-
-    //     pn_link_open(link);
-
-    //     if (pn_link_is_receiver(link)) pn_link_flow(link, worker->credit_window);
-
-    //     break;
-    // }
     case PN_LINK_FLOW: {
         pn_link_t* sender = pn_event_link(event);
         int err;
@@ -173,10 +162,6 @@ static int worker_handle_event(worker_t* worker, pn_event_t* event, bool* runnin
         while (pn_link_credit(sender) > 0) {
             err = worker_send_message(worker, sender);
             if (err) return err;
-
-            // XXX
-            //sleep(1);
-            //break; XXX
         }
 
         break;
@@ -190,21 +175,12 @@ static int worker_handle_event(worker_t* worker, pn_event_t* event, bool* runnin
             // Message acknowledged
             pn_delivery_settle(delivery);
         } else if (pn_link_is_receiver(link)) {
-            // API: These preconditions also suck.
+            if (!pn_delivery_readable(delivery)) break;
+            if (pn_delivery_partial(delivery)) break;
 
-            if (!pn_delivery_readable(delivery)) {
-                printf("!pn_delivery_readable\n");
-                break;
-            }
-
-            if (pn_delivery_partial(delivery)) {
-                printf("pn_delivery_partial\n");
-                break;
-            }
-
-            // // Message received
-            // err = worker_handle_delivery(worker, delivery);
-            // if (err) return err;
+            // Message received
+            err = worker_handle_delivery(worker, delivery);
+            if (err) return err;
         } else {
             abort();
         }
@@ -256,7 +232,7 @@ static void worker_init(worker_t* worker, pn_proactor_t* proactor, int credit_wi
         .request_message = pn_message(),
         .response_message = pn_message(),
         .message_buffer = buf,
-        .credit_window = 1000,
+        .credit_window = credit_window,
     };
 }
 
@@ -269,17 +245,21 @@ static void worker_free(worker_t* worker) {
 }
 
 static void* worker_run(void* data) {
-    // XXX qbench.log.0
-
     worker_t* worker = (worker_t*) data;
-    bool running = true;
 
-    // while XXX
+    char log_file_name[256];
+    snprintf(log_file_name, 256, "qbench.log.0");
+
+    worker->log_file = fopen(log_file_name, "w");
+    if (!worker->log_file) abort();
+
     char addr[256];
     pn_connection_t* connection = pn_connection();
 
     pn_proactor_addr(addr, sizeof(addr), "localhost", "5672");
-    pn_proactor_connect(worker->proactor, connection, addr);
+    pn_proactor_connect2(worker->proactor, connection, NULL, addr);
+
+    bool running = true;
 
     while (running) {
         pn_event_batch_t* batch = pn_proactor_wait(worker->proactor);
@@ -294,8 +274,12 @@ static void* worker_run(void* data) {
         pn_proactor_done(worker->proactor, batch);
     }
 
+    fflush(worker->log_file);
+
     return NULL;
 }
+
+static pn_proactor_t* proactor = NULL;
 
 static void signal_handler(int signum) {
     pn_proactor_interrupt(proactor);
@@ -315,7 +299,7 @@ int main(size_t argc, char** argv) {
     printf("Starting\n");
 
     for (int i = 0; i < worker_count; i++) {
-        worker_init(&workers[i], proactor, 1000);
+        worker_init(&workers[i], proactor, 10);
         pthread_create(&worker_threads[i], NULL, &worker_run, &workers[i]);
     }
 

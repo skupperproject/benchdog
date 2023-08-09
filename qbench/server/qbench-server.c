@@ -38,8 +38,6 @@ typedef struct worker {
     int credit_window;
 } worker_t;
 
-static pn_proactor_t* proactor = NULL;
-
 static int message_send(pn_message_t* message, pn_delivery_t* delivery, pn_rwbytes_t* buffer) {
     pn_link_t* sender = pn_delivery_link(delivery);
     ssize_t ret;
@@ -96,8 +94,8 @@ static int worker_handle_delivery(worker_t* worker, pn_event_t* event) {
     pn_data_put_string(response_body, pn_data_get_string(request_body));
 
     // API: I want pn_delivery to take a NULL for the delivery tag.
-    pn_delivery_tag_t tag = pn_dtag((char*) &worker->sender_sequence, sizeof(worker->sender_sequence));
-    pn_delivery_t* response_delivery = pn_delivery(worker->sender, tag);
+    // pn_delivery_tag_t tag = pn_dtag((char*) &worker->sender_sequence, sizeof(worker->sender_sequence));
+    pn_delivery_t* response_delivery = pn_delivery(worker->sender, pn_bytes_null);
 
     err = message_send(worker->response_message, response_delivery, worker->message_buffer);
     if (err) return err;
@@ -260,7 +258,7 @@ static void worker_init(worker_t* worker, pn_proactor_t* proactor, int credit_wi
         .request_message = pn_message(),
         .response_message = pn_message(),
         .message_buffer = buf,
-        .credit_window = 1000,
+        .credit_window = credit_window,
     };
 }
 
@@ -291,6 +289,8 @@ static void* worker_run(void* data) {
     return NULL;
 }
 
+static pn_proactor_t* proactor = NULL;
+
 static void signal_handler(int signum) {
     pn_proactor_interrupt(proactor);
 }
@@ -314,7 +314,7 @@ int main(size_t argc, char** argv) {
     pn_proactor_listen(proactor, listener, addr, 32);
 
     for (int i = 0; i < worker_count; i++) {
-        worker_init(&workers[i], proactor, 1000);
+        worker_init(&workers[i], proactor, 10);
         pthread_create(&worker_threads[i], NULL, &worker_run, &workers[i]);
     }
 
