@@ -28,9 +28,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+// XXX for sleep
+#include <unistd.h>
+
 typedef struct worker {
     pn_proactor_t* proactor;
-    pn_link_t* sender;
+    pn_connection_t* connection;
     pn_message_t* request_message;
     pn_message_t* response_message;
     pn_rwbytes_t* message_buffer;
@@ -39,6 +42,8 @@ typedef struct worker {
 } worker_t;
 
 static pn_proactor_t* proactor = NULL;
+
+// make_delivery
 
 static int message_send(pn_message_t* message, pn_delivery_t* delivery, pn_rwbytes_t* buffer) {
     pn_link_t* sender = pn_delivery_link(delivery);
@@ -77,39 +82,31 @@ static int message_receive(pn_message_t* message, pn_delivery_t* delivery, pn_rw
     return 0;
 }
 
-// delivery instead of event in signature XXX
-static int worker_handle_delivery(worker_t* worker, pn_event_t* event) {
-    pn_delivery_t* delivery = pn_event_delivery(event);
-    pn_link_t* receiver = pn_delivery_link(delivery);
+static int worker_send_message(worker_t* worker, pn_link_t* sender) {
     int err;
 
-    err = message_receive(worker->request_message, delivery, worker->message_buffer);
-    if (err) return err;
+    pn_msgid_t id = (pn_msgid_t) {
+        .type = PN_ULONG,
+        .u.as_ulong = worker->sender_sequence,
+    };
 
-    pn_message_set_address(worker->response_message, pn_message_get_reply_to(worker->request_message));
-    pn_message_set_correlation_id(worker->response_message, pn_message_get_id(worker->request_message));
+    pn_message_set_id(worker->request_message, id);
 
-    pn_data_t* request_body = pn_message_body(worker->request_message);
-    pn_data_t* response_body = pn_message_body(worker->response_message);
+    // pn_data_t* body = pn_message_body(worker->request_message);
+    // pn_data_put_string(body, pn_data_get_string(request_body));
 
-    pn_data_next(request_body);
-    pn_data_put_string(response_body, pn_data_get_string(request_body));
-
-    // API: I want pn_delivery to take a NULL for the delivery tag.
     pn_delivery_tag_t tag = pn_dtag((char*) &worker->sender_sequence, sizeof(worker->sender_sequence));
-    pn_delivery_t* response_delivery = pn_delivery(worker->sender, tag);
+    pn_delivery_t* delivery = pn_delivery(sender, tag);
 
-    err = message_send(worker->response_message, response_delivery, worker->message_buffer);
+    err = message_send(worker->request_message, delivery, worker->message_buffer);
     if (err) return err;
 
     worker->sender_sequence += 1;
 
-    // API: Want pn_delivery_accept(delivery);
-    pn_delivery_update(delivery, PN_ACCEPTED);
-    pn_delivery_settle(delivery);
+    return 0;
+}
 
-    pn_link_flow(receiver, worker->credit_window - pn_link_credit(receiver));
-
+static int worker_handle_delivery(worker_t* worker, pn_delivery_t* delivery) {
     return 0;
 }
 
@@ -123,65 +120,72 @@ static void check_condition(pn_event_t* event, pn_condition_t* condition) {
     }
 }
 
-// XXX return int error and pass running by ref
-static bool worker_handle_event(worker_t* worker, pn_event_t* event) {
+static int worker_handle_event(worker_t* worker, pn_event_t* event, bool* running) {
     switch (pn_event_type(event)) {
-    case PN_LISTENER_ACCEPT: {
-        pn_listener_t* listener = pn_event_listener(event);
-        pn_connection_t* connection = pn_connection();
-
-        pn_listener_accept(listener, connection);
-
-        break;
-    }
     case PN_CONNECTION_INIT: {
-        pn_connection_set_container(pn_event_connection(event), "qbench-server");
+        pn_connection_t* connection = pn_event_connection(event);
+        pn_session_t* session = pn_session(connection);
+
+        pn_connection_set_container(pn_event_connection(event), "qbench-client");
+        pn_session_open(session);
+
+        pn_link_t* sender = pn_sender(session, "requests");
+        pn_terminus_t* sender_target = pn_link_target(sender);
+
+        pn_terminus_set_address(sender_target, "requests");
+        pn_link_open(sender);
+
+        pn_link_t* receiver = pn_receiver(session, "responses");
+        pn_terminus_t* receiver_target = pn_link_target(receiver);
+
+        pn_terminus_set_address(receiver_target, "responses");
+        // pn_terminus_set_address(receiver_target, NULL);
+        // pn_terminus_set_dynamic(receiver_target, true);
+
+        pn_link_open(receiver);
+        pn_link_flow(receiver, worker->credit_window);
+
         break;
     }
-    case PN_CONNECTION_REMOTE_OPEN: {
-        pn_connection_open(pn_event_connection(event));
-        break;
-    }
-    case PN_SESSION_REMOTE_OPEN: {
-        pn_session_open(pn_event_session(event));
-        break;
-    }
-    case PN_LINK_REMOTE_OPEN: {
-        pn_link_t* link = pn_event_link(event);
-        pn_terminus_t* local_target = pn_link_target(link);
-        pn_terminus_t* remote_target = pn_link_remote_target(link);
-        const char* remote_address = pn_terminus_get_address(remote_target);
+    // case PN_CONNECTION_REMOTE_OPEN: {
+    //     pn_connection_open(pn_event_connection(event));
+    //     break;
+    // }
+    // case PN_SESSION_REMOTE_OPEN: {
+    //     pn_session_open(pn_event_session(event));
+    //     break;
+    // }
+    // case PN_LINK_REMOTE_OPEN: {
+    //     pn_link_t* link = pn_event_link(event);
 
-        if (pn_link_is_sender(link)) {
-            // Open an anonymous sender
+    //     pn_link_open(link);
 
-            // pn_terminus_set_address(local_target, NULL);
-            // pn_terminus_set_dynamic(local_target, true);
+    //     if (pn_link_is_receiver(link)) pn_link_flow(link, worker->credit_window);
 
-            pn_link_open(link);
+    //     break;
+    // }
+    case PN_LINK_FLOW: {
+        pn_link_t* sender = pn_event_link(event);
+        int err;
 
-            worker->sender = link;
-        } else if (pn_link_is_receiver(link)) {
-            pn_terminus_set_address(local_target, remote_address);
-            pn_link_open(link);
-            pn_link_flow(link, worker->credit_window);
-        } else {
-            abort();
+        if (pn_link_is_receiver(sender)) abort();
+
+        while (pn_link_credit(sender) > 0) {
+            err = worker_send_message(worker, sender);
+            if (err) return err;
+
+            // XXX
+            //sleep(1);
+            //break; XXX
         }
 
         break;
     }
     case PN_DELIVERY: {
-        // API: Using PN_DELIVERY for so many different things sucks.
-        // We could have DELIVERY_ENTIRE vs partial
-        // We could have PN_TRACKER or PN_DELIVERY_DISPOSITION_UPDATE
-
         pn_delivery_t* delivery = pn_event_delivery(event);
         pn_link_t* link = pn_delivery_link(delivery);
         int err;
 
-        // API: Want to avoid the link types here.  Want to focus on a
-        // message *or* an ack.
         if (pn_link_is_sender(link)) {
             // Message acknowledged
             pn_delivery_settle(delivery);
@@ -198,14 +202,9 @@ static bool worker_handle_event(worker_t* worker, pn_event_t* event) {
                 break;
             }
 
-            if (!worker->sender) {
-                printf("sender not ready\n");
-                break;
-            }
-
-            // Message received
-            err = worker_handle_delivery(worker, event);
-            if (err) abort();
+            // // Message received
+            // err = worker_handle_delivery(worker, delivery);
+            // if (err) return err;
         } else {
             abort();
         }
@@ -236,18 +235,15 @@ static bool worker_handle_event(worker_t* worker, pn_event_t* event) {
 
         break;
     }
-    case PN_LISTENER_CLOSE: {
-        check_condition(event, pn_connection_remote_condition(pn_event_connection(event)));
-        break;
-    }
     case PN_PROACTOR_INTERRUPT: {
         // Interrupt the next thread
         pn_proactor_interrupt(worker->proactor);
-        return false;
+        *running = false;
+        return 0;
     }
     }
 
-    return true;
+    return 0;
 }
 
 static void worker_init(worker_t* worker, pn_proactor_t* proactor, int credit_window) {
@@ -273,18 +269,28 @@ static void worker_free(worker_t* worker) {
 }
 
 static void* worker_run(void* data) {
+    // XXX qbench.log.0
+
     worker_t* worker = (worker_t*) data;
     bool running = true;
+
+    // while XXX
+    char addr[256];
+    pn_connection_t* connection = pn_connection();
+
+    pn_proactor_addr(addr, sizeof(addr), "localhost", "5672");
+    pn_proactor_connect(worker->proactor, connection, addr);
 
     while (running) {
         pn_event_batch_t* batch = pn_proactor_wait(worker->proactor);
         pn_event_t* event;
+        int err;
 
         while (running && (event = pn_event_batch_next(batch))) {
-            running = worker_handle_event(worker, event);
+            err = worker_handle_event(worker, event, &running);
+            if (err) abort(); // XXX Gentler
         }
 
-        // API: Should be pn_event_batch_done(batch) IMO.
         pn_proactor_done(worker->proactor, batch);
     }
 
@@ -297,8 +303,6 @@ static void signal_handler(int signum) {
 
 int main(size_t argc, char** argv) {
     proactor = pn_proactor();
-    pn_listener_t* listener = pn_listener();
-    char addr[256];
 
     const int worker_count = 1;
     worker_t workers[worker_count];
@@ -309,9 +313,6 @@ int main(size_t argc, char** argv) {
     signal(SIGTERM, signal_handler);
 
     printf("Starting\n");
-
-    pn_proactor_addr(addr, sizeof(addr), "localhost", "5672");
-    pn_proactor_listen(proactor, listener, addr, 32);
 
     for (int i = 0; i < worker_count; i++) {
         worker_init(&workers[i], proactor, 1000);
