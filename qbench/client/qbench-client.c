@@ -37,6 +37,7 @@ typedef struct worker {
     FILE* log_file;
     long sender_sequence;
     int credit_window;
+    int id;
 } worker_t;
 
 static void fail(char* message) {
@@ -53,9 +54,7 @@ static ssize_t message_encode(pn_message_t* message, char* buffer, size_t size) 
     return inout_size;
 }
 
-static int message_send(pn_message_t* message, pn_delivery_t* delivery, pn_rwbytes_t* buffer) {
-    pn_link_t* sender = pn_delivery_link(delivery);
-    size_t size = buffer->size;
+static int message_send(pn_link_t* sender, pn_message_t* message, pn_rwbytes_t* buffer) {
     ssize_t ret;
 
     while (true) {
@@ -75,6 +74,10 @@ static int message_send(pn_message_t* message, pn_delivery_t* delivery, pn_rwbyt
         break;
     }
 
+    // API: I want pn_delivery to take a NULL for the delivery
+    // tag.  Want it to generate the tag for me.
+    pn_delivery_t* delivery = pn_delivery(sender, pn_bytes_null);
+
     ret = pn_link_send(sender, buffer->start, ret);
     if (ret < 0) return ret;
 
@@ -83,7 +86,7 @@ static int message_send(pn_message_t* message, pn_delivery_t* delivery, pn_rwbyt
     return 0;
 }
 
-static int message_receive(pn_message_t* message, pn_delivery_t* delivery, pn_rwbytes_t* buffer) {
+static int message_receive(pn_delivery_t* delivery, pn_message_t* message, pn_rwbytes_t* buffer) {
     pn_link_t* receiver = pn_delivery_link(delivery);
     ssize_t size = pn_delivery_pending(delivery);
     ssize_t ret;
@@ -105,7 +108,8 @@ static int message_receive(pn_message_t* message, pn_delivery_t* delivery, pn_rw
     return 0;
 }
 
-static int worker_send_message(worker_t* worker, pn_link_t* sender) {
+static int worker_send_message(worker_t* worker, pn_event_t* event) {
+    pn_link_t* sender = pn_event_link(event);
     int err;
 
     pn_msgid_t id = (pn_msgid_t) {
@@ -118,9 +122,7 @@ static int worker_send_message(worker_t* worker, pn_link_t* sender) {
     // pn_data_t* body = pn_message_body(worker->request_message);
     // pn_data_put_string(body, pn_data_get_string(request_body));
 
-    pn_delivery_t* delivery = pn_delivery(sender, pn_bytes_null);
-
-    err = message_send(worker->request_message, delivery, worker->message_buffer);
+    err = message_send(sender, worker->request_message, worker->message_buffer);
     if (err) return err;
 
     worker->sender_sequence += 1;
@@ -128,11 +130,12 @@ static int worker_send_message(worker_t* worker, pn_link_t* sender) {
     return 0;
 }
 
-static int worker_handle_delivery(worker_t* worker, pn_delivery_t* delivery) {
-    pn_link_t* receiver = pn_delivery_link(delivery);
+static int worker_receive_message(worker_t* worker, pn_event_t* event) {
+    pn_delivery_t* delivery = pn_event_delivery(event);
+    pn_link_t* receiver = pn_event_link(event);
     int err;
 
-    err = message_receive(worker->response_message, delivery, worker->message_buffer);
+    err = message_receive(delivery, worker->response_message, worker->message_buffer);
     if (err) return err;
 
     fprintf(worker->log_file, "1,1\n"); // XXX
@@ -174,22 +177,28 @@ static int worker_handle_event(worker_t* worker, pn_event_t* event, bool* runnin
         pn_terminus_t* receiver_target = pn_link_target(receiver);
 
         pn_terminus_set_address(receiver_target, "responses");
-        // pn_terminus_set_address(receiver_target, NULL);
-        // pn_terminus_set_dynamic(receiver_target, true);
-
         pn_link_open(receiver);
         pn_link_flow(receiver, worker->credit_window);
 
         break;
     }
+    // case PN_LINK_REMOTE_OPEN: {
+    //     pn_link_t* link = pn_event_link(event);
+
+    //     if (pn_link_is_receiver(link)) {
+    //         pn_link_flow(link, worker->credit_window);
+    //     }
+
+    //     break;
+    // }
     case PN_LINK_FLOW: {
         pn_link_t* sender = pn_event_link(event);
         int err;
 
-        if (pn_link_is_receiver(sender)) fail("link is receiver");
+        if (pn_link_is_receiver(sender)) fail("in flow link_is_receiver");
 
         while (pn_link_credit(sender) > 0) {
-            err = worker_send_message(worker, sender);
+            err = worker_send_message(worker, event);
             if (err) return err;
         }
 
@@ -208,7 +217,7 @@ static int worker_handle_event(worker_t* worker, pn_event_t* event, bool* runnin
             if (pn_delivery_partial(delivery)) break;
 
             // Message received
-            err = worker_handle_delivery(worker, delivery);
+            err = worker_receive_message(worker, event);
             if (err) return err;
         } else {
             fail("fail");
@@ -251,7 +260,7 @@ static int worker_handle_event(worker_t* worker, pn_event_t* event, bool* runnin
     return 0;
 }
 
-static void worker_init(worker_t* worker, pn_proactor_t* proactor, int credit_window) {
+static void worker_init(worker_t* worker, int id, pn_proactor_t* proactor, int credit_window) {
     pn_rwbytes_t* buffer = (pn_rwbytes_t*) malloc(sizeof(pn_rwbytes_t));
 
     *buffer = (pn_rwbytes_t) {
@@ -260,6 +269,7 @@ static void worker_init(worker_t* worker, pn_proactor_t* proactor, int credit_wi
     };
 
     *worker = (worker_t) {
+        .id = id,
         .proactor = proactor,
         .request_message = pn_message(),
         .response_message = pn_message(),
@@ -278,9 +288,10 @@ static void worker_free(worker_t* worker) {
 
 static void* worker_run(void* data) {
     worker_t* worker = (worker_t*) data;
+    int id = worker->id;
 
     char log_file_name[256];
-    snprintf(log_file_name, 256, "qbench.log.0");
+    snprintf(log_file_name, 256, "qbench.%d.log", id);
 
     worker->log_file = fopen(log_file_name, "w");
     if (!worker->log_file) fail("fopen");
@@ -320,7 +331,7 @@ static void signal_handler(int signum) {
 int main(size_t argc, char** argv) {
     proactor = pn_proactor();
 
-    const int worker_count = 1;
+    const int worker_count = 10;
     worker_t workers[worker_count];
     pthread_t worker_threads[worker_count];
 
@@ -331,7 +342,7 @@ int main(size_t argc, char** argv) {
     printf("Starting\n");
 
     for (int i = 0; i < worker_count; i++) {
-        worker_init(&workers[i], proactor, 10);
+        worker_init(&workers[i], i, proactor, 10);
         pthread_create(&worker_threads[i], NULL, &worker_run, &workers[i]);
     }
 
