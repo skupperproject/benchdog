@@ -27,8 +27,10 @@
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 typedef struct worker {
+    pn_bytes_t body_bytes;
     pn_proactor_t* proactor;
     pn_connection_t* connection;
     pn_message_t* request_message;
@@ -269,6 +271,10 @@ static void worker_init(worker_t* worker, int id, pn_proactor_t* proactor, int c
         .start = malloc(64),
     };
 
+    const int body_size = 100;
+    char* body_bytes = (char*) malloc(body_size);
+    memset(body_bytes, 'x', body_size);
+
     *worker = (worker_t) {
         .id = id,
         .proactor = proactor,
@@ -276,6 +282,7 @@ static void worker_init(worker_t* worker, int id, pn_proactor_t* proactor, int c
         .response_message = pn_message(),
         .message_buffer = buffer,
         .credit_window = credit_window,
+        .body_bytes = pn_bytes(body_size, body_bytes),
     };
 }
 
@@ -285,6 +292,7 @@ static void worker_free(worker_t* worker) {
 
     free(worker->message_buffer->start);
     free(worker->message_buffer);
+    free((char*) worker->body_bytes.start);
 }
 
 static void* worker_run(void* data) {
