@@ -63,7 +63,7 @@ static ssize_t message_encode(pn_message_t* message, char* buffer, size_t size) 
     return inout_size;
 }
 
-static int message_send(pn_link_t* sender, pn_message_t* message, pn_rwbytes_t* buffer) {
+static int message_send(pn_message_t* message, pn_link_t* sender, pn_rwbytes_t* buffer) {
     ssize_t ret;
 
     while (true) {
@@ -95,8 +95,8 @@ static int message_send(pn_link_t* sender, pn_message_t* message, pn_rwbytes_t* 
     return 0;
 }
 
-static int message_receive(pn_delivery_t* delivery, pn_message_t* message, pn_rwbytes_t* buffer) {
-    pn_link_t* receiver = pn_delivery_link(delivery);
+static int message_receive(pn_message_t* message, pn_link_t* receiver, pn_rwbytes_t* buffer) {
+    pn_delivery_t* delivery = pn_link_current(receiver);
     ssize_t size = pn_delivery_pending(delivery);
     ssize_t ret;
 
@@ -123,7 +123,7 @@ static int worker_receive_message(worker_t* worker, pn_event_t* event) {
     pn_connection_t* connection = pn_event_connection(event);
     int err;
 
-    err = message_receive(delivery, worker->request_message, worker->message_buffer);
+    err = message_receive(worker->request_message, receiver, worker->message_buffer);
     if (err) return err;
 
     pn_message_set_address(worker->response_message, pn_message_get_reply_to(worker->request_message));
@@ -137,10 +137,9 @@ static int worker_receive_message(worker_t* worker, pn_event_t* event) {
 
     pn_link_t* sender = (pn_link_t*) pn_connection_get_context(connection);
 
-    // XXX Not sure I need this
-    if (!sender) fail("sender is null");
+    if (!sender) fail("Sender is null"); // XXX Not sure I need this
 
-    message_send(sender, worker->response_message, worker->message_buffer);
+    message_send(worker->response_message, sender, worker->message_buffer);
 
     pn_delivery_update(delivery, PN_ACCEPTED);
     pn_delivery_settle(delivery);

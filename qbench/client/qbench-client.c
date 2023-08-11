@@ -66,7 +66,7 @@ static ssize_t message_encode(pn_message_t* message, char* buffer, size_t size) 
     return inout_size;
 }
 
-static int message_send(pn_link_t* sender, pn_message_t* message, pn_rwbytes_t* buffer) {
+static int message_send(pn_message_t* message, pn_link_t* sender, pn_rwbytes_t* buffer) {
     ssize_t ret;
 
     while (true) {
@@ -88,6 +88,8 @@ static int message_send(pn_link_t* sender, pn_message_t* message, pn_rwbytes_t* 
 
     // API: I want pn_delivery to take a NULL for the delivery
     // tag.  Want it to generate the tag for me.
+    //
+    // Alternatively, I could do it in message_send.
     pn_delivery_t* delivery = pn_delivery(sender, pn_bytes_null);
 
     ret = pn_link_send(sender, buffer->start, ret);
@@ -98,8 +100,8 @@ static int message_send(pn_link_t* sender, pn_message_t* message, pn_rwbytes_t* 
     return 0;
 }
 
-static int message_receive(pn_delivery_t* delivery, pn_message_t* message, pn_rwbytes_t* buffer) {
-    pn_link_t* receiver = pn_delivery_link(delivery);
+static int message_receive(pn_message_t* message, pn_link_t* receiver, pn_rwbytes_t* buffer) {
+    pn_delivery_t* delivery = pn_link_current(receiver);
     ssize_t size = pn_delivery_pending(delivery);
     ssize_t ret;
 
@@ -134,7 +136,7 @@ static int worker_send_message(worker_t* worker, pn_event_t* event) {
     // pn_data_t* body = pn_message_body(worker->request_message);
     // pn_data_put_string(body, pn_data_get_string(request_body));
 
-    err = message_send(sender, worker->request_message, worker->message_buffer);
+    err = message_send(worker->request_message, sender, worker->message_buffer);
     if (err) return err;
 
     worker->sender_sequence += 1;
@@ -147,7 +149,7 @@ static int worker_receive_message(worker_t* worker, pn_event_t* event) {
     pn_link_t* receiver = pn_event_link(event);
     int err;
 
-    err = message_receive(delivery, worker->response_message, worker->message_buffer);
+    err = message_receive(worker->response_message, receiver, worker->message_buffer);
     if (err) return err;
 
     fprintf(worker->log_file, "1,1\n"); // XXX
