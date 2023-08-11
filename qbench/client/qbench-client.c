@@ -137,8 +137,8 @@ static int worker_send_message(worker_t* worker, pn_event_t* event) {
 
     pn_message_set_id(worker->request_message, id);
 
-    // pn_data_t* body = pn_message_body(worker->request_message);
-    // pn_data_put_string(body, pn_data_get_string(request_body));
+    pn_data_t* body = pn_message_body(worker->request_message);
+    pn_data_put_binary(body, worker->body_bytes);
 
     err = message_send(worker->request_message, sender, &worker->message_buffer);
     if (err) return err;
