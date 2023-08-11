@@ -33,20 +33,25 @@ typedef struct worker {
     pn_message_t* request_message;
     pn_message_t* response_message;
     pn_rwbytes_t* message_buffer;
-    pn_link_t* sender;
     int credit_window;
     int id;
 } worker_t;
 
-typedef struct response_list {
-    pn_message_t** messages;
-    size_t size;
-    size_t capacity; // XXX
-} response_list_t;
-
 static void fail(char* message) {
     fprintf(stderr, "FAILED: %s\n", message);
     abort();
+}
+
+static void error(char* message) {
+    fprintf(stderr, "ERROR: %s\n", message);
+}
+
+static void info(char* message) {
+    printf("%s\n", message);
+}
+
+static bool delivery_complete(pn_delivery_t* delivery) {
+    return pn_delivery_readable(delivery) && !pn_delivery_partial(delivery);
 }
 
 static ssize_t message_encode(pn_message_t* message, char* buffer, size_t size) {
@@ -112,30 +117,6 @@ static int message_receive(pn_delivery_t* delivery, pn_message_t* message, pn_rw
     return 0;
 }
 
-static response_list_t* response_list_alloc() {
-    response_list_t* responses = (response_list_t*) malloc(sizeof(response_list_t));
-
-    *responses = (response_list_t) {
-        .messages = (pn_message_t**) malloc(1000000 * sizeof(pn_message_t*)),
-        .size = 0,
-        .capacity = 1000000,
-    };
-
-    return responses;
-}
-
-static void response_list_free(response_list_t* responses) {
-    // XXX free all messages still on the list
-    free(responses->messages);
-}
-
-static void response_list_add_response(response_list_t* responses, pn_message_t* response) {
-    if (responses->size >= responses->capacity) fail("response_list_add_response");
-
-    responses->messages[responses->size] = response;
-    responses->size += 1;
-}
-
 static int worker_receive_message(worker_t* worker, pn_event_t* event) {
     pn_delivery_t* delivery = pn_event_delivery(event);
     pn_link_t* receiver = pn_event_link(event);
@@ -145,13 +126,11 @@ static int worker_receive_message(worker_t* worker, pn_event_t* event) {
     err = message_receive(delivery, worker->request_message, worker->message_buffer);
     if (err) return err;
 
-    pn_message_t* response_message = pn_message();
-
-    pn_message_set_address(response_message, pn_message_get_reply_to(worker->request_message));
-    pn_message_set_correlation_id(response_message, pn_message_get_id(worker->request_message));
+    pn_message_set_address(worker->response_message, pn_message_get_reply_to(worker->request_message));
+    pn_message_set_correlation_id(worker->response_message, pn_message_get_id(worker->request_message));
 
     pn_data_t* request_body = pn_message_body(worker->request_message);
-    pn_data_t* response_body = pn_message_body(response_message);
+    pn_data_t* response_body = pn_message_body(worker->response_message);
 
     pn_data_next(request_body);
     pn_data_put_string(response_body, pn_data_get_string(request_body));
@@ -160,13 +139,8 @@ static int worker_receive_message(worker_t* worker, pn_event_t* event) {
 
     if (!sender) fail("sender is null");
 
-    message_send(sender, response_message, worker->message_buffer);
+    message_send(sender, worker->response_message, worker->message_buffer);
 
-    pn_message_free(response_message);
-
-    // response_list_add_response(responses, response_message);
-
-    // API: Want pn_delivery_accept(), _reject(), and so on
     pn_delivery_update(delivery, PN_ACCEPTED);
     pn_delivery_settle(delivery);
 
@@ -175,38 +149,12 @@ static int worker_receive_message(worker_t* worker, pn_event_t* event) {
     return 0;
 }
 
-static int worker_send_responses(worker_t* worker, pn_event_t* event) {
-    pn_connection_t* connection = pn_event_connection(event);
-    pn_link_t* sender = pn_event_link(event);
-    int err;
-
-    response_list_t* responses = (response_list_t*) pn_connection_get_context(connection);
-
-    printf("responses size = %d\n", responses->size);
-
-    for (int i = 0; i < responses->size; i++) {
-        pn_message_t* message = responses->messages[i];
-
-        err = message_send(sender, message, worker->message_buffer);
-        if (err) return err;
-
-        pn_message_free(message);
-    }
-
-    responses->size = 0;
-
-    printf("responses size = %d\n", responses->size);
-
-    return 0;
-}
-
 static void check_condition(pn_event_t* event, pn_condition_t* condition) {
     if (pn_condition_is_set(condition)) {
-        fprintf(stderr, "%s: %s: %s",
+        fprintf(stderr, "ERROR: %s: %s: %s",
                 pn_event_type_name(pn_event_type(event)),
                 pn_condition_get_name(condition),
                 pn_condition_get_description(condition));
-        abort();
     }
 }
 
@@ -221,12 +169,7 @@ static int worker_handle_event(worker_t* worker, pn_event_t* event, bool* runnin
         break;
     }
     case PN_CONNECTION_INIT: {
-        pn_connection_t* connection = pn_event_connection(event);
-        response_list_t* responses = response_list_alloc();
-
-        pn_connection_set_container(connection, "qbench-server");
-        pn_connection_set_context(connection, responses);
-
+        pn_connection_set_container(pn_event_connection(event), "qbench-server");
         break;
     }
     case PN_CONNECTION_REMOTE_OPEN: {
@@ -246,56 +189,37 @@ static int worker_handle_event(worker_t* worker, pn_event_t* event, bool* runnin
         pn_terminus_set_address(target, remote_address);
         pn_link_open(link);
 
+        // API: Want to avoid the link types here.  Want to focus on a
+        // message (the receiver side) *or* an ack (the sender side).
+
         if (pn_link_is_receiver(link)) {
+            // Receiver
             pn_link_flow(link, worker->credit_window);
-        } else if (pn_link_is_sender(link)) {
+        } else {
+            // Sender
+
             // Save the sender for sending responses
-            //
             // XXX Consider flipping this around and having the server
             // create the responses link
-            pn_connection_t* connection = pn_event_connection(event);
-            pn_connection_set_context(connection, link);
-        } else {
-            fail("fail");
+            pn_connection_set_context(pn_event_connection(event), link);
         }
 
         break;
     }
-    // case PN_LINK_FLOW: {
-    //     pn_link_t* sender = pn_event_link(event);
-    //     int err;
-
-    //     printf("calling\n");
-
-    //     err = worker_send_responses(worker, event);
-    //     if (err) return err;
-
-    //     break;
-    // }
     case PN_DELIVERY: {
-        // API: Using PN_DELIVERY for so many different things sucks.
-        // We could have DELIVERY_ENTIRE vs partial
-        // We could have PN_TRACKER or PN_DELIVERY_DISPOSITION_UPDATE
-
         pn_delivery_t* delivery = pn_event_delivery(event);
         pn_link_t* link = pn_delivery_link(delivery);
         int err;
 
-        // API: Want to avoid the link types here.  Want to focus on a
-        // message *or* an ack.
-        if (pn_link_is_sender(link)) {
-            // Message acknowledged
-            pn_delivery_settle(delivery);
-        } else if (pn_link_is_receiver(link)) {
-            // API: These preconditions also suck.
-            if (!pn_delivery_readable(delivery)) break;
-            if (pn_delivery_partial(delivery)) break;
-
-            // Message received
-            err = worker_receive_message(worker, event);
-            if (err) return err;
+        if (pn_link_is_receiver(link)) {
+            // Receiver
+            if (delivery_complete(delivery)) {
+                err = worker_receive_message(worker, event);
+                if (err) return err;
+            }
         } else {
-            fail("fail");
+            // Sender
+            pn_delivery_settle(delivery);
         }
 
         break;
@@ -376,10 +300,9 @@ static void* worker_run(void* data) {
 
         while ((event = pn_event_batch_next(batch))) {
             err = worker_handle_event(worker, event, &running);
-            if (err) fail("worker_handle_event"); // XXX Gentler
+            if (err) error("Error handling event");
         }
 
-        // API: Should be pn_event_batch_done(batch) IMO.
         pn_proactor_done(worker->proactor, batch);
     }
 
@@ -405,15 +328,15 @@ int main(size_t argc, char** argv) {
     signal(SIGQUIT, signal_handler);
     signal(SIGTERM, signal_handler);
 
-    printf("Starting\n");
-
     pn_proactor_addr(addr, sizeof(addr), "localhost", "5672");
     pn_proactor_listen(proactor, listener, addr, 32);
 
     for (int i = 0; i < worker_count; i++) {
-        worker_init(&workers[i], i, proactor, 10);
+        worker_init(&workers[i], i, proactor, 1000);
         pthread_create(&worker_threads[i], NULL, &worker_run, &workers[i]);
     }
+
+    info("Server started");
 
     for (int i = 0; i < worker_count; i++) {
         pthread_join(worker_threads[i], NULL);
@@ -422,5 +345,5 @@ int main(size_t argc, char** argv) {
 
     pn_proactor_free(proactor);
 
-    printf("Stopping\n");
+    info("Server stopped");
 }

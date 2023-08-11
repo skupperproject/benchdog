@@ -45,6 +45,18 @@ static void fail(char* message) {
     abort();
 }
 
+static void error(char* message) {
+    fprintf(stderr, "ERROR: %s\n", message);
+}
+
+static void info(char* message) {
+    printf("%s\n", message);
+}
+
+static bool delivery_complete(pn_delivery_t* delivery) {
+    return pn_delivery_readable(delivery) && !pn_delivery_partial(delivery);
+}
+
 static ssize_t message_encode(pn_message_t* message, char* buffer, size_t size) {
     size_t inout_size = size;
     int err = pn_message_encode(message, buffer, &inout_size);
@@ -150,11 +162,10 @@ static int worker_receive_message(worker_t* worker, pn_event_t* event) {
 
 static void check_condition(pn_event_t* event, pn_condition_t* condition) {
     if (pn_condition_is_set(condition)) {
-        fprintf(stderr, "%s: %s: %s",
+        fprintf(stderr, "ERROR: %s: %s: %s",
                 pn_event_type_name(pn_event_type(event)),
                 pn_condition_get_name(condition),
                 pn_condition_get_description(condition));
-        abort();
     }
 }
 
@@ -182,15 +193,6 @@ static int worker_handle_event(worker_t* worker, pn_event_t* event, bool* runnin
 
         break;
     }
-    // case PN_LINK_REMOTE_OPEN: {
-    //     pn_link_t* link = pn_event_link(event);
-
-    //     if (pn_link_is_receiver(link)) {
-    //         pn_link_flow(link, worker->credit_window);
-    //     }
-
-    //     break;
-    // }
     case PN_LINK_FLOW: {
         pn_link_t* sender = pn_event_link(event);
         int err;
@@ -209,18 +211,15 @@ static int worker_handle_event(worker_t* worker, pn_event_t* event, bool* runnin
         pn_link_t* link = pn_delivery_link(delivery);
         int err;
 
-        if (pn_link_is_sender(link)) {
-            // Message acknowledged
-            pn_delivery_settle(delivery);
-        } else if (pn_link_is_receiver(link)) {
-            if (!pn_delivery_readable(delivery)) break;
-            if (pn_delivery_partial(delivery)) break;
-
-            // Message received
-            err = worker_receive_message(worker, event);
-            if (err) return err;
+        if (pn_link_is_receiver(link)) {
+            // Receiver
+            if (delivery_complete(delivery)) {
+                err = worker_receive_message(worker, event);
+                if (err) return err;
+            }
         } else {
-            fail("fail");
+            // Sender
+            pn_delivery_settle(delivery);
         }
 
         break;
@@ -291,7 +290,7 @@ static void* worker_run(void* data) {
     int id = worker->id;
 
     char log_file_name[256];
-    snprintf(log_file_name, 256, "qbench.%d.log", id);
+    snprintf(log_file_name, sizeof(log_file_name), "qbench.%d.log", id);
 
     worker->log_file = fopen(log_file_name, "w");
     if (!worker->log_file) fail("fopen");
@@ -311,7 +310,7 @@ static void* worker_run(void* data) {
 
         while ((event = pn_event_batch_next(batch))) {
             err = worker_handle_event(worker, event, &running);
-            if (err) fail("worker_handle_event"); // XXX Gentler
+            if (err) error("Error handling event");
         }
 
         pn_proactor_done(worker->proactor, batch);
@@ -339,12 +338,12 @@ int main(size_t argc, char** argv) {
     signal(SIGQUIT, signal_handler);
     signal(SIGTERM, signal_handler);
 
-    printf("Starting\n");
-
     for (int i = 0; i < worker_count; i++) {
-        worker_init(&workers[i], i, proactor, 10);
+        worker_init(&workers[i], i, proactor, 1000);
         pthread_create(&worker_threads[i], NULL, &worker_run, &workers[i]);
     }
+
+    info("Client started");
 
     for (int i = 0; i < worker_count; i++) {
         pthread_join(worker_threads[i], NULL);
@@ -353,5 +352,5 @@ int main(size_t argc, char** argv) {
 
     pn_proactor_free(proactor);
 
-    printf("Stopping\n");
+    info("Client stopped");
 }
