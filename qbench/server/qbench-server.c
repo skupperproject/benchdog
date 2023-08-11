@@ -137,6 +137,7 @@ static int worker_receive_message(worker_t* worker, pn_event_t* event) {
 
     pn_link_t* sender = (pn_link_t*) pn_connection_get_context(connection);
 
+    // XXX Not sure I need this
     if (!sender) fail("sender is null");
 
     message_send(sender, worker->response_message, worker->message_buffer);
@@ -189,9 +190,6 @@ static int worker_handle_event(worker_t* worker, pn_event_t* event, bool* runnin
         pn_terminus_set_address(target, remote_address);
         pn_link_open(link);
 
-        // API: Want to avoid the link types here.  Want to focus on a
-        // message (the receiver side) *or* an ack (the sender side).
-
         if (pn_link_is_receiver(link)) {
             // Receiver
             pn_link_flow(link, worker->credit_window);
@@ -199,8 +197,6 @@ static int worker_handle_event(worker_t* worker, pn_event_t* event, bool* runnin
             // Sender
 
             // Save the sender for sending responses
-            // XXX Consider flipping this around and having the server
-            // create the responses link
             pn_connection_set_context(pn_event_connection(event), link);
         }
 

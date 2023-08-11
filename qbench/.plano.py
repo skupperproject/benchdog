@@ -25,5 +25,5 @@ def run_():
     count = call("wc -l qbench.log", shell=True).split()[0]
 
     print()
-    print(">>> {:c,} <<<".format(int(count) / 5))
+    print(">>> {:,} messages per second <<<".format(int(count) / 5))
     print()
