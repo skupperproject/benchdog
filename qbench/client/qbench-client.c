@@ -29,16 +29,18 @@
 #include <stdlib.h>
 #include <string.h>
 
+static const int credit_window = 100;
+static const int body_size = 100;
+
 typedef struct worker {
-    pn_bytes_t body_bytes;
     pn_proactor_t* proactor;
     pn_connection_t* connection;
     pn_message_t* request_message;
     pn_message_t* response_message;
-    pn_rwbytes_t* message_buffer;
+    pn_rwbytes_t message_buffer;
+    pn_bytes_t body_bytes;
     FILE* log_file;
     long sender_sequence;
-    int credit_window;
     int id;
 } worker_t;
 
@@ -55,7 +57,7 @@ static void info(char* message) {
     printf("%s\n", message);
 }
 
-static bool delivery_done(pn_delivery_t* delivery) {
+static bool delivery_is_complete(pn_delivery_t* delivery) {
     return pn_delivery_readable(delivery) && !pn_delivery_partial(delivery);
 }
 
@@ -138,7 +140,7 @@ static int worker_send_message(worker_t* worker, pn_event_t* event) {
     // pn_data_t* body = pn_message_body(worker->request_message);
     // pn_data_put_string(body, pn_data_get_string(request_body));
 
-    err = message_send(worker->request_message, sender, worker->message_buffer);
+    err = message_send(worker->request_message, sender, &worker->message_buffer);
     if (err) return err;
 
     worker->sender_sequence += 1;
@@ -151,7 +153,7 @@ static int worker_receive_message(worker_t* worker, pn_event_t* event) {
     pn_link_t* receiver = pn_event_link(event);
     int err;
 
-    err = message_receive(worker->response_message, receiver, worker->message_buffer);
+    err = message_receive(worker->response_message, receiver, &worker->message_buffer);
     if (err) return err;
 
     fprintf(worker->log_file, "1,1\n"); // XXX
@@ -159,7 +161,7 @@ static int worker_receive_message(worker_t* worker, pn_event_t* event) {
     pn_delivery_update(delivery, PN_ACCEPTED);
     pn_delivery_settle(delivery);
 
-    pn_link_flow(receiver, worker->credit_window - pn_link_credit(receiver));
+    pn_link_flow(receiver, credit_window - pn_link_credit(receiver));
 
     return 0;
 }
@@ -193,7 +195,7 @@ static int worker_handle_event(worker_t* worker, pn_event_t* event, bool* runnin
 
         pn_terminus_set_address(receiver_target, "responses");
         pn_link_open(receiver);
-        pn_link_flow(receiver, worker->credit_window);
+        pn_link_flow(receiver, credit_window);
 
         break;
     }
@@ -217,7 +219,7 @@ static int worker_handle_event(worker_t* worker, pn_event_t* event, bool* runnin
 
         if (pn_link_is_receiver(link)) {
             // Receiver
-            if (delivery_done(delivery)) {
+            if (delivery_is_complete(delivery)) {
                 err = worker_receive_message(worker, event);
                 if (err) return err;
             }
@@ -263,16 +265,9 @@ static int worker_handle_event(worker_t* worker, pn_event_t* event, bool* runnin
     return 0;
 }
 
-static void worker_init(worker_t* worker, int id, pn_proactor_t* proactor, int credit_window) {
-    pn_rwbytes_t* buffer = (pn_rwbytes_t*) malloc(sizeof(pn_rwbytes_t));
-
-    *buffer = (pn_rwbytes_t) {
-        .size = 64,
-        .start = malloc(64),
-    };
-
-    const int body_size = 100;
+static void worker_init(worker_t* worker, int id, pn_proactor_t* proactor) {
     char* body_bytes = (char*) malloc(body_size);
+
     memset(body_bytes, 'x', body_size);
 
     *worker = (worker_t) {
@@ -280,8 +275,7 @@ static void worker_init(worker_t* worker, int id, pn_proactor_t* proactor, int c
         .proactor = proactor,
         .request_message = pn_message(),
         .response_message = pn_message(),
-        .message_buffer = buffer,
-        .credit_window = credit_window,
+        .message_buffer = pn_rwbytes(64, malloc(64)),
         .body_bytes = pn_bytes(body_size, body_bytes),
     };
 }
@@ -290,8 +284,7 @@ static void worker_free(worker_t* worker) {
     pn_message_free(worker->request_message);
     pn_message_free(worker->response_message);
 
-    free(worker->message_buffer->start);
-    free(worker->message_buffer);
+    free(worker->message_buffer.start);
     free((char*) worker->body_bytes.start);
 }
 
@@ -349,7 +342,7 @@ int main(size_t argc, char** argv) {
     signal(SIGTERM, signal_handler);
 
     for (int i = 0; i < worker_count; i++) {
-        worker_init(&workers[i], i, proactor, 1000);
+        worker_init(&workers[i], i, proactor);
         pthread_create(&worker_threads[i], NULL, &worker_run, &workers[i]);
     }
 

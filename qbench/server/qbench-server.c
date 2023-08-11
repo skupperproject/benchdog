@@ -28,12 +28,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+static const int credit_window = 100;
+
 typedef struct worker {
     pn_proactor_t* proactor;
     pn_message_t* request_message;
     pn_message_t* response_message;
-    pn_rwbytes_t* message_buffer;
-    int credit_window;
+    pn_rwbytes_t message_buffer;
     int id;
 } worker_t;
 
@@ -50,7 +51,7 @@ static void info(char* message) {
     printf("%s\n", message);
 }
 
-static bool delivery_done(pn_delivery_t* delivery) {
+static bool delivery_is_complete(pn_delivery_t* delivery) {
     return pn_delivery_readable(delivery) && !pn_delivery_partial(delivery);
 }
 
@@ -123,7 +124,7 @@ static int worker_receive_message(worker_t* worker, pn_event_t* event) {
     pn_connection_t* connection = pn_event_connection(event);
     int err;
 
-    err = message_receive(worker->request_message, receiver, worker->message_buffer);
+    err = message_receive(worker->request_message, receiver, &worker->message_buffer);
     if (err) return err;
 
     pn_message_set_address(worker->response_message, pn_message_get_reply_to(worker->request_message));
@@ -139,12 +140,12 @@ static int worker_receive_message(worker_t* worker, pn_event_t* event) {
 
     if (!sender) fail("Sender is null"); // XXX Not sure I need this
 
-    message_send(worker->response_message, sender, worker->message_buffer);
+    message_send(worker->response_message, sender, &worker->message_buffer);
 
     pn_delivery_update(delivery, PN_ACCEPTED);
     pn_delivery_settle(delivery);
 
-    pn_link_flow(receiver, worker->credit_window - pn_link_credit(receiver));
+    pn_link_flow(receiver, credit_window - pn_link_credit(receiver));
 
     return 0;
 }
@@ -191,7 +192,7 @@ static int worker_handle_event(worker_t* worker, pn_event_t* event, bool* runnin
 
         if (pn_link_is_receiver(link)) {
             // Receiver
-            pn_link_flow(link, worker->credit_window);
+            pn_link_flow(link, credit_window);
         } else {
             // Sender
 
@@ -208,7 +209,7 @@ static int worker_handle_event(worker_t* worker, pn_event_t* event, bool* runnin
 
         if (pn_link_is_receiver(link)) {
             // Receiver
-            if (delivery_done(delivery)) {
+            if (delivery_is_complete(delivery)) {
                 err = worker_receive_message(worker, event);
                 if (err) return err;
             }
@@ -258,21 +259,13 @@ static int worker_handle_event(worker_t* worker, pn_event_t* event, bool* runnin
     return 0;
 }
 
-static void worker_init(worker_t* worker, int id, pn_proactor_t* proactor, int credit_window) {
-    pn_rwbytes_t* buffer = (pn_rwbytes_t*) malloc(sizeof(pn_rwbytes_t));
-
-    *buffer = (pn_rwbytes_t) {
-        .size = 64,
-        .start = malloc(64),
-    };
-
+static void worker_init(worker_t* worker, int id, pn_proactor_t* proactor) {
     *worker = (worker_t) {
         .id = id,
         .proactor = proactor,
         .request_message = pn_message(),
         .response_message = pn_message(),
-        .message_buffer = buffer,
-        .credit_window = credit_window,
+        .message_buffer = pn_rwbytes(64, malloc(64)),
     };
 }
 
@@ -280,8 +273,7 @@ static void worker_free(worker_t* worker) {
     pn_message_free(worker->request_message);
     pn_message_free(worker->response_message);
 
-    free(worker->message_buffer->start);
-    free(worker->message_buffer);
+    free(worker->message_buffer.start);
 }
 
 static void* worker_run(void* data) {
@@ -327,7 +319,7 @@ int main(size_t argc, char** argv) {
     pn_proactor_listen(proactor, listener, addr, 32);
 
     for (int i = 0; i < worker_count; i++) {
-        worker_init(&workers[i], i, proactor, 1000);
+        worker_init(&workers[i], i, proactor);
         pthread_create(&worker_threads[i], NULL, &worker_run, &workers[i]);
     }
 
