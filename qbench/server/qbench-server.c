@@ -50,7 +50,7 @@ static void info(char* message) {
     printf("%s\n", message);
 }
 
-static bool delivery_complete(pn_delivery_t* delivery) {
+static bool delivery_done(pn_delivery_t* delivery) {
     return pn_delivery_readable(delivery) && !pn_delivery_partial(delivery);
 }
 
@@ -209,7 +209,7 @@ static int worker_handle_event(worker_t* worker, pn_event_t* event, bool* runnin
 
         if (pn_link_is_receiver(link)) {
             // Receiver
-            if (delivery_complete(delivery)) {
+            if (delivery_done(delivery)) {
                 err = worker_receive_message(worker, event);
                 if (err) return err;
             }
