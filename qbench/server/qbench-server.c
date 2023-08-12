@@ -35,6 +35,7 @@ typedef struct worker {
     pn_message_t* request_message;
     pn_message_t* response_message;
     pn_rwbytes_t message_buffer;
+    long sender_sequence;
     int id;
 } worker_t;
 
@@ -118,7 +119,44 @@ static int message_receive(pn_message_t* message, pn_link_t* receiver, pn_rwbyte
     return 0;
 }
 
-static int worker_receive_message(worker_t* worker, pn_event_t* event) {
+static int worker_send_response(worker_t* worker, pn_event_t* event) {
+    pn_link_t* sender = (pn_link_t*) pn_connection_get_context(pn_event_connection(event));
+    int err;
+
+    if (!sender) fail("Sender is null"); // XXX Not sure I need this
+
+    pn_msgid_t id = (pn_msgid_t) {
+        .type = PN_ULONG,
+        .u.as_ulong = worker->sender_sequence,
+    };
+
+    pn_message_set_id(worker->response_message, id);
+
+    const char* request_reply_to = pn_message_get_reply_to(worker->request_message);
+    pn_msgid_t request_id = pn_message_get_id(worker->request_message);
+
+    pn_message_set_address(worker->response_message, request_reply_to);
+    pn_message_set_correlation_id(worker->response_message, request_id);
+
+    pn_data_t* request_properties = pn_message_properties(worker->request_message);
+    pn_data_t* response_properties = pn_message_properties(worker->response_message);
+
+    pn_data_copy(response_properties, request_properties);
+
+    pn_data_t* request_body = pn_message_body(worker->request_message);
+    pn_data_t* response_body = pn_message_body(worker->response_message);
+
+    pn_data_copy(response_body, request_body);
+
+    err = message_send(worker->response_message, sender, &worker->message_buffer);
+    if (err) return err;
+
+    worker->sender_sequence += 1;
+
+    return 0;
+}
+
+static int worker_receive_request(worker_t* worker, pn_event_t* event) {
     pn_delivery_t* delivery = pn_event_delivery(event);
     pn_link_t* receiver = pn_event_link(event);
     pn_connection_t* connection = pn_event_connection(event);
@@ -127,20 +165,7 @@ static int worker_receive_message(worker_t* worker, pn_event_t* event) {
     err = message_receive(worker->request_message, receiver, &worker->message_buffer);
     if (err) return err;
 
-    pn_message_set_address(worker->response_message, pn_message_get_reply_to(worker->request_message));
-    pn_message_set_correlation_id(worker->response_message, pn_message_get_id(worker->request_message));
-
-    pn_data_t* request_body = pn_message_body(worker->request_message);
-    pn_data_t* response_body = pn_message_body(worker->response_message);
-
-    pn_data_next(request_body);
-    pn_data_put_string(response_body, pn_data_get_string(request_body));
-
-    pn_link_t* sender = (pn_link_t*) pn_connection_get_context(connection);
-
-    if (!sender) fail("Sender is null"); // XXX Not sure I need this
-
-    message_send(worker->response_message, sender, &worker->message_buffer);
+    worker_send_response(worker, event);
 
     pn_delivery_update(delivery, PN_ACCEPTED);
     pn_delivery_settle(delivery);
@@ -191,11 +216,8 @@ static int worker_handle_event(worker_t* worker, pn_event_t* event, bool* runnin
         pn_link_open(link);
 
         if (pn_link_is_receiver(link)) {
-            // Receiver
             pn_link_flow(link, credit_window);
         } else {
-            // Sender
-
             // Save the sender for sending responses
             pn_connection_set_context(pn_event_connection(event), link);
         }
@@ -208,13 +230,11 @@ static int worker_handle_event(worker_t* worker, pn_event_t* event, bool* runnin
         int err;
 
         if (pn_link_is_receiver(link)) {
-            // Receiver
             if (delivery_is_complete(delivery)) {
-                err = worker_receive_message(worker, event);
+                err = worker_receive_request(worker, event);
                 if (err) return err;
             }
         } else {
-            // Sender
             pn_delivery_settle(delivery);
         }
 

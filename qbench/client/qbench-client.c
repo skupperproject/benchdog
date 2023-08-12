@@ -17,6 +17,8 @@
  * under the License.
  */
 
+#define _POSIX_C_SOURCE 200112L
+
 #include <proton/engine.h>
 #include <proton/error.h>
 #include <proton/event.h>
@@ -28,6 +30,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
+#include <inttypes.h>
+#include <unistd.h>
 
 static const int credit_window = 100;
 static const int body_size = 100;
@@ -55,6 +60,12 @@ static void error(char* message) {
 
 static void info(char* message) {
     printf("%s\n", message);
+}
+
+static int64_t now() {
+    struct timespec t;
+    clock_gettime(CLOCK_REALTIME, &t);
+    return t.tv_sec * 1000 + t.tv_nsec / (1000 * 1000);
 }
 
 static bool delivery_is_complete(pn_delivery_t* delivery) {
@@ -126,7 +137,7 @@ static int message_receive(pn_message_t* message, pn_link_t* receiver, pn_rwbyte
     return 0;
 }
 
-static int worker_send_message(worker_t* worker, pn_event_t* event) {
+static int worker_send_request(worker_t* worker, pn_event_t* event) {
     pn_link_t* sender = pn_event_link(event);
     int err;
 
@@ -136,6 +147,15 @@ static int worker_send_message(worker_t* worker, pn_event_t* event) {
     };
 
     pn_message_set_id(worker->request_message, id);
+    pn_message_set_address(worker->request_message, "responses");
+
+    pn_data_t* properties = pn_message_properties(worker->request_message);
+    pn_data_clear(properties);
+    pn_data_put_map(properties);
+    pn_data_enter(properties);
+    pn_data_put_string(properties, pn_bytes(sizeof("send-time"), "send-time"));
+    pn_data_put_long(properties, now());
+    pn_data_exit(properties);
 
     pn_data_t* body = pn_message_body(worker->request_message);
     pn_data_put_binary(body, worker->body_bytes);
@@ -148,7 +168,7 @@ static int worker_send_message(worker_t* worker, pn_event_t* event) {
     return 0;
 }
 
-static int worker_receive_message(worker_t* worker, pn_event_t* event) {
+static int worker_receive_response(worker_t* worker, pn_event_t* event) {
     pn_delivery_t* delivery = pn_event_delivery(event);
     pn_link_t* receiver = pn_event_link(event);
     int err;
@@ -156,7 +176,27 @@ static int worker_receive_message(worker_t* worker, pn_event_t* event) {
     err = message_receive(worker->response_message, receiver, &worker->message_buffer);
     if (err) return err;
 
-    fprintf(worker->log_file, "1,1\n"); // XXX
+    pn_data_t* properties = pn_message_properties(worker->response_message);
+
+    // pn_data_dump(properties);
+    // abort();
+
+    pn_data_rewind(properties);
+    pn_data_next(properties);
+    pn_data_get_map(properties);
+    pn_data_enter(properties);
+    pn_data_next(properties);
+    pn_bytes_t key = pn_data_get_string(properties);
+
+    // if (key.size != sizeof("send-time") || memcmp(key.start, "send-time", key.size) != 0) {
+    //     return PN_ERR;
+    // }
+
+    pn_data_next(properties);
+    int64_t send_time = pn_data_get_long(properties);
+    pn_data_exit(properties);
+
+    fprintf(worker->log_file, "%d,1\n", send_time); // XXX
 
     pn_delivery_update(delivery, PN_ACCEPTED);
     pn_delivery_settle(delivery);
@@ -206,7 +246,7 @@ static int worker_handle_event(worker_t* worker, pn_event_t* event, bool* runnin
         if (pn_link_is_receiver(sender)) fail("in flow link_is_receiver");
 
         while (pn_link_credit(sender) > 0) {
-            err = worker_send_message(worker, event);
+            err = worker_send_request(worker, event);
             if (err) return err;
         }
 
@@ -218,13 +258,11 @@ static int worker_handle_event(worker_t* worker, pn_event_t* event, bool* runnin
         int err;
 
         if (pn_link_is_receiver(link)) {
-            // Receiver
             if (delivery_is_complete(delivery)) {
-                err = worker_receive_message(worker, event);
+                err = worker_receive_response(worker, event);
                 if (err) return err;
             }
         } else {
-            // Sender
             pn_delivery_settle(delivery);
         }
 
