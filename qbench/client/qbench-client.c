@@ -178,9 +178,6 @@ static int worker_receive_response(worker_t* worker, pn_event_t* event) {
 
     pn_data_t* properties = pn_message_properties(worker->response_message);
 
-    // pn_data_dump(properties);
-    // abort();
-
     pn_data_rewind(properties);
     pn_data_next(properties);
     pn_data_get_map(properties);
@@ -188,15 +185,18 @@ static int worker_receive_response(worker_t* worker, pn_event_t* event) {
     pn_data_next(properties);
     pn_bytes_t key = pn_data_get_string(properties);
 
-    // if (key.size != sizeof("send-time") || memcmp(key.start, "send-time", key.size) != 0) {
-    //     return PN_ERR;
-    // }
+    if (key.size != sizeof("send-time") || memcmp(key.start, "send-time", key.size) != 0) {
+        return PN_ERR;
+    }
 
     pn_data_next(properties);
     int64_t send_time = pn_data_get_long(properties);
     pn_data_exit(properties);
 
-    fprintf(worker->log_file, "%d,1\n", send_time); // XXX
+    int64_t receive_time = now();
+    int64_t duration = receive_time - send_time;
+
+    fprintf(worker->log_file, "%" PRId64 ",%" PRId64 "\n", send_time, duration);
 
     pn_delivery_update(delivery, PN_ACCEPTED);
     pn_delivery_settle(delivery);
