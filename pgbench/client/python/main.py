@@ -1,4 +1,4 @@
-import json as _json
+;import json as _json
 import numpy as _numpy
 
 from benchdog import *
@@ -11,11 +11,11 @@ config = load_config(default_port=5432)
 def run_pgbench(clients):
     args = [
         "pgbench",
-        "--jobs", str(4),
-        "--rate", str(clients * 100),
         "--client", str(clients),
+        "--rate", str(clients * 100),
         "--host", str(config.host),
         "--port", str(config.port),
+        "--jobs", str(4),
         "--time", str(config.duration),
         "--progress", "2",
         "--select-only",

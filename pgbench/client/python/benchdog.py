@@ -37,21 +37,18 @@ def report(config, data, operation_text=None):
     for scenario in ("1", "10", "100"):
         scenario_data = data[scenario]
 
-        try:
-            throughputs = [x["operations"] / x["duration"] for x in scenario_data]
-        except KeyError:
-            continue
+        latencies = [x["latency"]["average"] for x in scenario_data]
 
-        throughput = _numpy.percentile(throughputs, 50, interpolation="nearest")
-        index = throughputs.index(throughput)
+        latency = _numpy.percentile(latencies, 50, interpolation="nearest")
+        index = latencies.index(latency)
         result = scenario_data[index]
 
         results[scenario] = {
-            "throughput": round(throughput, 2),
+            "throughput": round(result["operations"] / result["duration"], 2),
             "latency": result["latency"],
         }
 
-    columns = "{:>7}  {:>12}  {:>12}  {:>12}  {:>12}"
+    columns = "{:>7}  {:>18}  {:>14}  {:>14}  {:>14}"
 
     print()
     print("## Results")
@@ -68,10 +65,10 @@ def report(config, data, operation_text=None):
         latency = result["latency"]
 
         print(columns.format(scenario,
-                             "{:,.2f}".format(result["throughput"]),
-                             "{:,.2f}".format(latency["average"]),
-                             "{:,.2f}".format(latency["p50"]),
-                             "{:,.2f}".format(latency["p99"])))
+                             "{:,.1f} ops/s".format(result["throughput"]),
+                             "{:,.3f} ms".format(latency["average"]),
+                             "{:,.3f} ms".format(latency["p50"]),
+                             "{:,.3f} ms".format(latency["p99"])))
 
     print()
 
