@@ -12,7 +12,7 @@ def run_pgbench(clients):
     args = [
         "pgbench",
         "--client", str(clients),
-        "--rate", str(clients * 1000),
+        "--rate", str(clients * 100),
         "--host", str(config.host),
         "--port", str(config.port),
         "--jobs", str(4),
