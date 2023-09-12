@@ -1,4 +1,4 @@
-FROM postgres
+FROM docker.io/postgres
 
 RUN apt-get -qq update > /dev/null
 RUN apt-get -qq install postgresql-contrib > /dev/null

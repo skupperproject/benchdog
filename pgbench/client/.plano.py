@@ -7,7 +7,7 @@ def build():
     run(f"podman build -t {image_tag} .")
 
 @command
-def run_(host="localhost", port=5432, duration=10, iterations=5):
+def run_(host="localhost", port=5432, duration=10, iterations=1):
     build()
     run(f"podman run --net host --rm"
         f" --env BENCHDOG_HOST={host} --env BENCHDOG_PORT={port}"

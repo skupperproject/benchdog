@@ -57,7 +57,7 @@ def report(config, data, operation_text=None):
     print("## Results")
     print()
 
-    print(columns.format("CLIENTS", "THROUGHPUT", "LATENCY AVG", "LATENCY 50%", "LATENCY 99%"))
+    print(columns.format("CLIENTS", "THROUGHPUT", "LATENCY AVG", "LATENCY P50", "LATENCY P99"))
 
     for scenario in ("1", "10", "100"):
         try:
@@ -70,8 +70,8 @@ def report(config, data, operation_text=None):
         print(columns.format(scenario,
                              "{:,.2f}".format(result["throughput"]),
                              "{:,.2f}".format(latency["average"]),
-                             "{:,.2f}".format(latency["50"]),
-                             "{:,.2f}".format(latency["99"])))
+                             "{:,.2f}".format(latency["p50"]),
+                             "{:,.2f}".format(latency["p99"])))
 
     print()
 

@@ -2,7 +2,7 @@
 
 A containerized PostgreSQL benchmark tool based on [pgbench][pgbench].
 
-[pgbench]: https://github.com/ssorj/benchdog/blob/main/pgbench
+[pgbench]: https://www.postgresql.org/docs/current/pgbench.html
 
 ## Running the server in Kubernetes
 

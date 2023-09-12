@@ -11,7 +11,8 @@ config = load_config(default_port=5432)
 def run_pgbench(clients):
     args = [
         "pgbench",
-        "--jobs", str(clients),
+        "--jobs", str(4),
+        "--rate", str(clients * 100),
         "--client", str(clients),
         "--host", str(config.host),
         "--port", str(config.port),
@@ -39,6 +40,7 @@ def process_pgbench_logs():
         ("script_no", _numpy.uint64),
         ("time_epoch", _numpy.uint64),
         ("time_us", _numpy.uint64),
+        ("lag_time", _numpy.uint64),
     ]
 
     records = _numpy.loadtxt("pgbench_log", dtype=dtype)
@@ -59,8 +61,8 @@ def process_pgbench_logs():
         "operations": operations,
         "latency": {
             "average": round(average / 1000, 2),
-            "50": round(percentiles[0] / 1000, 2),
-            "99": round(percentiles[1] / 1000, 2),
+            "p50": round(percentiles[0] / 1000, 2),
+            "p99": round(percentiles[1] / 1000, 2),
         },
     }
 
