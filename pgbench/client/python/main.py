@@ -1,4 +1,4 @@
-;import json as _json
+import json as _json
 import numpy as _numpy
 
 from benchdog import *
