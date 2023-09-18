@@ -34,7 +34,7 @@ def report(config, data, operation_text=None):
 
     results = dict()
 
-    for scenario in ("1", "10", "100"):
+    for scenario in (1, 10, 100):
         scenario_data = data[scenario]
 
         latencies = [x["latency"]["average"] for x in scenario_data]
@@ -56,7 +56,7 @@ def report(config, data, operation_text=None):
 
     print(columns.format("CONNECTIONS", "THROUGHPUT", "LATENCY AVG", "LATENCY P50", "LATENCY P99"))
 
-    for scenario in ("1", "10", "100"):
+    for scenario in (1, 10, 100):
         try:
             result = results[scenario]
         except KeyError:

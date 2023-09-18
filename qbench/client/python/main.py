@@ -8,7 +8,7 @@ def run_qbench(connections):
     output_dir = make_temp_dir()
 
     args = [
-        "qbench",
+        "qbench", "client",
         "--output", output_dir,
         "--host", config.host,
         "--port", config.port,
@@ -25,7 +25,9 @@ def run_qbench(connections):
 def process_pgbench_output(output_dir):
     data = read_json(join(output_dir, "summary.json"))
 
-    return data["results"][data["configuration"]["connections"]]
+    scenario_key = str(data["configuration"]["connections"])
+
+    return data["scenarios"][scenario_key]
 
 def run_scenario(connections):
     results = list()
@@ -45,4 +47,4 @@ if __name__ == "__main__":
         100: run_scenario(100),
     }
 
-    report(config, data, operation_text="Each operation is one AMQP request message and one response message.")
+    report(config, data, operation_text="Each operation is two AMQP messages, a request and a response.")
