@@ -19,18 +19,3 @@ spec:
           image: quay.io/ssorj/benchdog-qbench-server
           ports:
             - containerPort: 55672
----
-# apiVersion: v1
-# kind: Service
-# metadata:
-#   labels:
-#     app: qbench-server
-#   name: qbench-server
-# spec:
-#   ports:
-#   - port: 55672
-#     protocol: TCP
-#     targetPort: 55672
-#   selector:
-#     app: qbench-server
-#   type: LoadBalancer
