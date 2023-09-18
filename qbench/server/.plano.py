@@ -9,7 +9,7 @@ def build():
 @command(name="run")
 def run_():
     build()
-    run(f"podman run --rm {image_tag}")
+    run(f"podman run --rm -p 55672:55672 {image_tag}")
 
 @command
 def push():
