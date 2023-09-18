@@ -1,6 +1,6 @@
 # Benchdog: pgbench
 
-A containerized PostgreSQL benchmark tool based on [pgbench][pgbench].
+A containerized PostgreSQL benchmark based on [pgbench][pgbench].
 
 [pgbench]: https://www.postgresql.org/docs/current/pgbench.html
 
