@@ -1,7 +1,7 @@
 from plano import *
 
 @command
-def test(app):
+def test():
     client_dir = get_real_path("client")
 
     with working_dir("server"):

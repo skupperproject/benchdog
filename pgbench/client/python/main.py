@@ -91,9 +91,9 @@ if __name__ == "__main__":
             break
 
     data = {
-        "1": run_scenario(1),
-        "10": run_scenario(10),
-        "100": run_scenario(100),
+        1: run_scenario(1),
+        10: run_scenario(10),
+        100: run_scenario(100),
     }
 
     report(config, data, operation_text="Each operation is a SQL select.")

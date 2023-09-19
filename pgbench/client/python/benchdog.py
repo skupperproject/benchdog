@@ -34,7 +34,7 @@ def report(config, data, operation_text=None):
 
     results = dict()
 
-    for scenario in ("1", "10", "100"):
+    for scenario in (1, 10, 100):
         scenario_data = data[scenario]
 
         latencies = [x["latency"]["average"] for x in scenario_data]
@@ -48,13 +48,13 @@ def report(config, data, operation_text=None):
             "latency": result["latency"],
         }
 
-    columns = "{:>7}  {:>18}  {:>14}  {:>14}  {:>14}"
+    columns = "{:>11}  {:>18}  {:>14}  {:>14}  {:>14}"
 
     print()
     print("## Results")
     print()
 
-    print(columns.format("CLIENTS", "THROUGHPUT", "LATENCY AVG", "LATENCY P50", "LATENCY P99"))
+    print(columns.format("CONNECTIONS", "THROUGHPUT", "LATENCY AVG", "LATENCY P50", "LATENCY P99"))
 
     for scenario in (1, 10, 100):
         try:
