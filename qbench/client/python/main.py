@@ -14,7 +14,7 @@ def run_qbench(connections):
         "--port", config.port,
         "--connections", connections,
         "--duration", config.duration,
-        "--rate", 10_000,
+        "--rate", 1000,
     ]
 
     run("rm -f qbench.log*", shell=True)
