@@ -1,0 +1,21 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: h2load-server
+  name: h2load-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: h2load-server
+  template:
+    metadata:
+      labels:
+        app: h2load-server
+    spec:
+      containers:
+        - name: h2load-server
+          image: quay.io/ssorj/benchdog-h2load-server
+          ports:
+            - containerPort: 58080
