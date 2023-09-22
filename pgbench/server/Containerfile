@@ -9,3 +9,5 @@ ENV POSTGRES_USER=postgres
 ENV POSTGRES_PASSWORD=c66efc1638e111eca22300d861c8e364
 ENV POSTGRES_HOST_AUTH_METHOD=scram-sha-256
 ENV POSTGRES_INITDB_ARGS=--auth-host=scram-sha-256
+
+CMD ["postgres", "-c", "shared_buffers=2GB", "-c", "max_connections=500"]

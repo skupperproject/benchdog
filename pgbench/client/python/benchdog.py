@@ -8,7 +8,7 @@ def load_config(default_port=8080):
                      port=ENV.get("BENCHDOG_PORT", default_port),
                      tls=ENV.get("BENCHDOG_TLS", "0") == "1",
                      duration=int(ENV.get("BENCHDOG_DURATION", 60)),
-                     iterations=int(ENV.get("BENCHDOG_ITERATIONS", 5)))
+                     iterations=int(ENV.get("BENCHDOG_ITERATIONS", 1)))
 
 def report(config, data, operation_text=None):
     print()
@@ -34,7 +34,7 @@ def report(config, data, operation_text=None):
 
     results = dict()
 
-    for scenario in (1, 10, 100):
+    for scenario in (10, 100, 500):
         scenario_data = data[scenario]
 
         latencies = [x["latency"]["average"] for x in scenario_data]
@@ -56,7 +56,7 @@ def report(config, data, operation_text=None):
 
     print(columns.format("CONNECTIONS", "THROUGHPUT", "LATENCY AVG", "LATENCY P50", "LATENCY P99"))
 
-    for scenario in (1, 10, 100):
+    for scenario in (10, 100, 500):
         try:
             result = results[scenario]
         except KeyError:

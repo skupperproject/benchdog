@@ -8,15 +8,15 @@ ENV["PGPASSWORD"] = "c66efc1638e111eca22300d861c8e364"
 
 config = load_config(default_port=5432)
 
-def run_pgbench(clients):
+def run_client(connections):
     args = [
         "pgbench",
-        "--client", str(clients),
-        "--rate", str(clients * 100),
+        "--client", str(connections),
+        "--rate", str(connections * 100),
+        "--time", str(config.duration),
         "--host", str(config.host),
         "--port", str(config.port),
         "--jobs", str(4),
-        "--time", str(config.duration),
         "--progress", "2",
         "--select-only",
         "--log",
@@ -68,12 +68,12 @@ def process_pgbench_logs():
 
     return data
 
-def run_scenario(clients):
+def run_scenario(connections):
     results = list()
 
     for i in range(config.iterations):
         sleep(min((10, config.duration)))
-        results.append(run_pgbench(clients))
+        results.append(run_client(connections))
 
     return results
 
@@ -91,9 +91,9 @@ if __name__ == "__main__":
             break
 
     data = {
-        1: run_scenario(1),
         10: run_scenario(10),
         100: run_scenario(100),
+        500: run_scenario(500),
     }
 
     report(config, data, operation_text="Each operation is a SQL select.")
