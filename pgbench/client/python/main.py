@@ -12,12 +12,13 @@ def run_client(connections):
     args = [
         "pgbench",
         "--client", str(connections),
-        "--rate", str(connections * 100),
+        "--rate", str(connections * 10),
         "--time", str(config.duration),
         "--host", str(config.host),
         "--port", str(config.port),
-        "--jobs", str(4),
+        "--jobs", str(10),
         "--progress", "2",
+        "--protocol", "prepared",
         "--select-only",
         "--log",
     ]
