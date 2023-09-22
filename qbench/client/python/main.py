@@ -20,9 +20,9 @@ def run_qbench(connections):
     run("rm -f qbench.log*", shell=True)
     run(args)
 
-    return process_pgbench_output(output_dir)
+    return process_qbench_output(output_dir)
 
-def process_pgbench_output(output_dir):
+def process_qbench_output(output_dir):
     data = read_json(join(output_dir, "summary.json"))
 
     scenario_key = str(data["configuration"]["connections"])
