@@ -14,7 +14,7 @@ def run_qbench(connections):
         "--port", config.port,
         "--connections", connections,
         "--duration", config.duration,
-        "--rate", 1000,
+        "--rate", 100,
     ]
 
     run("rm -f qbench.log*", shell=True)
@@ -42,9 +42,9 @@ if __name__ == "__main__":
     await_port(config.port, host=config.host)
 
     data = {
-        1: run_scenario(1),
         10: run_scenario(10),
         100: run_scenario(100),
+        500: run_scenario(500),
     }
 
     report(config, data, operation_text="Each operation is two AMQP messages, a request and a response.")
