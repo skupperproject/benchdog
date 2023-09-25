@@ -11,6 +11,7 @@ Server namespace:
     kubectl create namespace benchdog-server
     kubectl config set-context --current --namespace benchdog-server
     kubectl apply -f server/
+    kubectl expose deployment/pgbench-server --port 5432 --type LoadBalancer
 
 #### Running root containers in OpenShift
 

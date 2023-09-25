@@ -8,11 +8,11 @@ ENV["PGPASSWORD"] = "c66efc1638e111eca22300d861c8e364"
 
 config = load_config(default_port=5432)
 
-def run_client(connections):
+def run_client(connections, rate):
     args = [
         "pgbench",
         "--client", str(connections),
-        "--rate", str(connections * 10),
+        "--rate", str(connections * rate),
         "--time", str(config.duration),
         "--host", str(config.host),
         "--port", str(config.port),
@@ -26,9 +26,9 @@ def run_client(connections):
     run("rm -f pgbench_log*", shell=True)
     run(args)
 
-    return process_pgbench_logs()
+    return process_output()
 
-def process_pgbench_logs():
+def process_output():
     run("cat pgbench_log.* > pgbench_log", shell=True)
 
     if get_file_size("pgbench_log") == 0:
@@ -69,12 +69,12 @@ def process_pgbench_logs():
 
     return data
 
-def run_scenario(connections):
+def run_scenario(connections, rate):
     results = list()
 
     for i in range(config.iterations):
         sleep(min((10, config.duration)))
-        results.append(run_client(connections))
+        results.append(run_client(connections, rate))
 
     return results
 
@@ -91,10 +91,13 @@ if __name__ == "__main__":
         else:
             break
 
-    data = {
-        10: run_scenario(10),
-        100: run_scenario(100),
-        500: run_scenario(500),
-    }
+    scenarios = list()
+    results = dict()
 
-    report(config, data, operation_text="Each operation is a SQL select.")
+    for scenario_spec in config.scenarios.split(","):
+        scenarios.append(map(int, scenario_spec.split(":", 1)))
+
+    for connections, rate in scenarios:
+        results[f"{connections}:{rate}"] = run_scenario(connections, rate)
+
+    report(config, results, operation_text="Each operation is a SQL select.")
