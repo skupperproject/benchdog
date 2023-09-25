@@ -4,47 +4,50 @@ from benchdog import *
 
 config = load_config(default_port=55672)
 
-def run_qbench(connections):
+def run_client(connections, rate):
     output_dir = make_temp_dir()
 
     args = [
         "qbench", "client",
-        "--output", output_dir,
+        "--connections", connections,
+        "--rate", rate,
+        "--duration", config.duration,
         "--host", config.host,
         "--port", config.port,
-        "--connections", connections,
-        "--duration", config.duration,
-        "--rate", 100,
+        "--output", output_dir,
     ]
 
     run("rm -f qbench.log*", shell=True)
     run(args)
 
-    return process_qbench_output(output_dir)
+    return process_output(output_dir)
 
-def process_qbench_output(output_dir):
+def process_output(output_dir):
     data = read_json(join(output_dir, "summary.json"))
 
     scenario_key = str(data["configuration"]["connections"])
 
     return data["scenarios"][scenario_key]
 
-def run_scenario(connections):
+def run_scenario(connections, rate):
     results = list()
 
     for i in range(config.iterations):
         sleep(min((10, config.duration)))
-        results.append(run_qbench(connections))
+        results.append(run_client(connections, rate))
 
     return results
 
 if __name__ == "__main__":
     await_port(config.port, host=config.host)
 
-    data = {
-        10: run_scenario(10),
-        100: run_scenario(100),
-        500: run_scenario(500),
-    }
+    scenarios = list()
+    results = dict()
 
-    report(config, data, operation_text="Each operation is two AMQP messages, a request and a response.")
+    for scenario_spec in config.scenarios.split(","):
+        scenarios.append(map(int, scenario_spec.split(":", 1)))
+
+    for connections, rate in scenarios:
+        results[f"{connections}:{rate}"] = run_scenario(connections, rate)
+
+    report(config, results, operation_text="Each operation is two AMQP message transfers.")
