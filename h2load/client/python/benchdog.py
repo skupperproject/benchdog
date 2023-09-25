@@ -3,14 +3,15 @@ import numpy as _numpy
 
 from plano import *
 
-def load_config(default_port=8080):
+def load_config(default_port=8080, default_scenarios="10:100,100:100,500:100"):
     return Namespace(host=ENV.get("BENCHDOG_HOST", "localhost"),
                      port=ENV.get("BENCHDOG_PORT", default_port),
                      tls=ENV.get("BENCHDOG_TLS", "0") == "1",
+                     scenarios=ENV.get("BENCHDOG_SCENARIOS", default_scenarios),
                      duration=int(ENV.get("BENCHDOG_DURATION", 60)),
                      iterations=int(ENV.get("BENCHDOG_ITERATIONS", 1)))
 
-def report(config, data, operation_text=None):
+def report(config, results, operation_text=None):
     print()
     print("## Configuration")
     print()
@@ -23,6 +24,7 @@ def report(config, data, operation_text=None):
     print(f"Host:        {config.host}")
     print(f"Port:        {config.port}")
     print(f"TLS:         {tls_state}")
+    print(f"Scenarios:   {config.scenarios}")
     print(f"Duration:    {config.duration} {plural('second', config.duration)}")
     print(f"Iterations:  {config.iterations}")
 
@@ -30,20 +32,18 @@ def report(config, data, operation_text=None):
     # print("## Data")
     # print()
 
-    # print(_json.dumps(data))
+    # print(_json.dumps(results))
 
-    results = dict()
+    summary = dict()
 
-    for scenario in (10, 100, 500):
-        scenario_data = data[scenario]
-
-        latencies = [x["latency"]["average"] for x in scenario_data]
+    for scenario, result in results.items():
+        latencies = [x["latency"]["average"] for x in result]
 
         latency = _numpy.percentile(latencies, 50, interpolation="nearest")
         index = latencies.index(latency)
-        result = scenario_data[index]
+        result = result[index]
 
-        results[scenario] = {
+        summary[scenario] = {
             "throughput": round(result["operations"] / result["duration"], 2),
             "latency": result["latency"],
         }
@@ -56,15 +56,11 @@ def report(config, data, operation_text=None):
 
     print(columns.format("CONNECTIONS", "THROUGHPUT", "LATENCY AVG", "LATENCY P50", "LATENCY P99"))
 
-    for scenario in (10, 100, 500):
-        try:
-            result = results[scenario]
-        except KeyError:
-            continue
-
+    for scenario, result in summary.items():
         latency = result["latency"]
+        connections, rate = scenario.split(":", 1)
 
-        print(columns.format(scenario,
+        print(columns.format(connections,
                              "{:,.1f} ops/s".format(result["throughput"]),
                              "{:,.3f} ms".format(latency["average"]),
                              "{:,.3f} ms".format(latency["p50"]),

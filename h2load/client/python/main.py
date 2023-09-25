@@ -4,12 +4,12 @@ from benchdog import *
 
 config = load_config(default_port=58080)
 
-def run_client(connections):
+def run_client(connections, rate):
     args = [
         "h2load", f"http://{config.host}:{config.port}/index.txt",
-        "--duration", config.duration,
         "--clients", connections,
-        "--rps", 100,
+        "--rps", rate,
+        "--duration", config.duration,
         "--threads", min(4, connections),
         "--max-concurrent-streams", 10,
     ]
@@ -47,7 +47,7 @@ def process_output(output_file):
     else:
         raise Exception(output)
 
-    data = {
+    results = {
         "duration": config.duration,
         "operations": operations,
         "bits": bits, # bytes?
@@ -57,25 +57,29 @@ def process_output(output_file):
         }
     }
 
-    return data
+    return results
 
-def run_scenario(connections):
+def run_scenario(connections, rate):
     results = list()
 
     for i in range(config.iterations):
         sleep(min((10, config.duration)))
-        results.append(run_client(connections))
+        results.append(run_client(connections, rate))
 
     return results
 
 if __name__ == "__main__":
     await_port(config.port, host=config.host)
 
-    data = {
-        10: run_scenario(10),
-        100: run_scenario(100),
-        500: run_scenario(500),
-    }
+    scenarios = list()
+    results = dict()
 
-    pprint(data)
-    # report(config, data, operation_text="Each operation is an HTTP/2 request.")
+    for scenario_spec in config.scenarios.split(","):
+        scenarios.append(map(int, scenario_spec.split(":", 1)))
+
+    for connections, rate in scenarios:
+        results[f"{connections}:{rate}"] = run_scenario(connections, rate)
+
+    pprint(results)
+
+    # report(config, results, operation_text="Each operation is an HTTP/2 request.")
