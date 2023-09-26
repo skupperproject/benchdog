@@ -4,6 +4,7 @@ image_tag = "quay.io/ssorj/benchdog-h2load-client"
 
 @command
 def build():
+    copy("../../common/benchdog.py", "python/benchdog.py")
     run(f"podman build -t {image_tag} .")
 
 @command
