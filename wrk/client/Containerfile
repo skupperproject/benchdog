@@ -1,6 +1,6 @@
 FROM registry.fedoraproject.org/fedora-minimal AS build
 
-RUN microdnf install gcc git make unzip openssl-devel && microdnf clean all
+RUN microdnf -y install gcc git make unzip openssl-devel && microdnf clean all
 
 WORKDIR /home/root
 RUN git clone https://github.com/wg/wrk.git
@@ -10,7 +10,7 @@ RUN make WITH_OPENSSL=/usr
 
 FROM registry.fedoraproject.org/fedora-minimal
 
-RUN microdnf install python3-numpy
+RUN microdnf -y install python3-numpy
 
 COPY --from=build /home/root/wrk/wrk /usr/bin/wrk
 COPY main.lua /app/main.lua
@@ -18,4 +18,4 @@ COPY python /app/python
 COPY subrepos /app/subrepos
 
 WORKDIR /app
-CMD ["python3", "python/main.py"]
+CMD ["python", "python/main.py"]

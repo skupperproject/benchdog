@@ -171,7 +171,7 @@ def main():
     for connections, rate in scenarios:
         results[f"{connections}:{rate}"] = run_scenario(config, connections, rate)
 
-    report(config, results, operation_text="Each operation is an HTTP/2 request.")
+    report(config, results, operation_text="Each operation is an HTTP/2 GET request.")
 
 if __name__ == "__main__":
     try:
