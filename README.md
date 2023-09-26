@@ -52,12 +52,14 @@ The benchmark client is configured using these environment variables:
 
 - **BENCHDOG_HOST** - The host to connect to (default localhost)
 - **BENCHDOG_PORT** - The port to connect to (the default is benchmark specific)
-- **BENCHDOG_SCENARIOS - A comma-separated list of
-  `<connections>:<rate>` pairs.  The rate is per connection.
 - **BENCHDOG_DURATION** - The time in seconds to run the test (default 60)
 - **BENCHDOG_ITERATIONS** - The number of repeated runs for each
   scenario (default 1).  If this is more than 1, the high median by
   average latency is reported.
+- **BENCHDOG_SCENARIOS** - A comma-separated list of
+  `<connections>:<rate>` pairs, where `<connections>` is the number of
+  concurrent client connections and `<rate>` is the number of
+  operations per second, per connection.
 
 ## Testing with Skupper
 
