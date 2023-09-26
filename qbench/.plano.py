@@ -7,4 +7,4 @@ def test():
     with working_dir("server"):
         with start("plano run"):
             with working_dir(client_dir):
-                run("plano run --duration 1")
+                run("plano run --duration 10")

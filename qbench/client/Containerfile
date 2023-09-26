@@ -46,4 +46,4 @@ COPY python /home/fritz/python
 COPY subrepos /home/fritz/subrepos
 
 WORKDIR /home/fritz
-CMD ["python3", "python/main.py"]
+CMD ["python", "python/main.py"]
