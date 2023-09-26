@@ -45,7 +45,9 @@ _max = max
 ## Exceptions
 
 class PlanoException(Exception):
-    pass
+    def __init__(self, message=None):
+        super().__init__(message)
+        self.message = message
 
 class PlanoError(PlanoException):
     pass
@@ -310,8 +312,10 @@ def change_dir(dir, quiet=False):
     return prev_dir
 
 def list_dir(dir=None, include="*", exclude=()):
-    if dir in (None, ""):
+    if dir is None:
         dir = get_current_dir()
+    else:
+        dir = expand(dir)
 
     assert is_dir(dir), dir
 
@@ -343,6 +347,8 @@ class working_dir:
         if self.dir is None:
             self.dir = make_temp_dir()
             self.remove = True
+        else:
+            self.dir = expand(self.dir)
 
     def __enter__(self):
         if self.dir == ".":
@@ -699,6 +705,9 @@ def parse_json(json):
 
 def emit_json(data):
     return _json.dumps(data, indent=4, separators=(",", ": "), sort_keys=True)
+
+def print_json(data, **kwargs):
+    print(emit_json(data), **kwargs)
 
 ## HTTP operations
 
@@ -1105,7 +1114,7 @@ def _format_command(command, represent=True):
     else:
         args = command
 
-    args = [expand(x) for x in args]
+    args = [expand(str(x)) for x in args]
     command = " ".join(args)
 
     if represent:
@@ -1159,14 +1168,14 @@ def start(command, stdin=None, stdout=None, stderr=None, output=None, shell=Fals
         if is_string(command):
             args = command
         else:
-            args = " ".join(command)
+            args = " ".join(map(str, command))
     else:
         if is_string(command):
             args = _shlex.split(command)
         else:
             args = command
 
-        args = [expand(x) for x in args]
+        args = [expand(str(x)) for x in args]
 
     try:
         proc = PlanoProcess(args, stdin=stdin, stdout=stdout, stderr=stderr, shell=shell, close_fds=True, stash_file=stash_file)
@@ -1310,7 +1319,7 @@ class PlanoProcess(_subprocess.Popen):
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
-        kill(self)
+        stop(self)
 
     def __repr__(self):
         return "process {} (command {})".format(self.pid, _format_command(self.args))
@@ -1411,17 +1420,17 @@ def get_user_temp_dir():
     except KeyError:
         return join(get_system_temp_dir(), get_user())
 
-def make_temp_file(suffix="", dir=None):
+def make_temp_file(prefix="plano-", suffix="", dir=None):
     if dir is None:
         dir = get_system_temp_dir()
 
-    return _tempfile.mkstemp(prefix="plano-", suffix=suffix, dir=dir)[1]
+    return _tempfile.mkstemp(prefix=prefix, suffix=suffix, dir=dir)[1]
 
-def make_temp_dir(suffix="", dir=None):
+def make_temp_dir(prefix="plano-", suffix="", dir=None):
     if dir is None:
         dir = get_system_temp_dir()
 
-    return _tempfile.mkdtemp(prefix="plano-", suffix=suffix, dir=dir)
+    return _tempfile.mkdtemp(prefix=prefix, suffix=suffix, dir=dir)
 
 class temp_file:
     def __init__(self, suffix="", dir=None):
@@ -1629,6 +1638,9 @@ def emit_yaml(data):
     import yaml as _yaml
 
     return _yaml.safe_dump(data)
+
+def print_yaml(data, **kwargs):
+    print(emit_yaml(data), **kwargs)
 
 if PLANO_DEBUG: # pragma: nocover
     enable_logging(level="debug")

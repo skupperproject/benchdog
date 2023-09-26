@@ -488,6 +488,10 @@ def json_operations():
         assert input_data == parsed_data, (input_data, parsed_data)
         assert json == emitted_json, (json, emitted_json)
 
+        with expect_output(equals=emitted_json) as out:
+            with open(out, "w") as f:
+                print_json(input_data, file=f, end="")
+
 @test
 def link_operations():
     with working_dir():
@@ -688,6 +692,9 @@ def process_operations():
     print(repr(proc))
 
     run("date", stash=True)
+
+    run(["echo", 1, 2, 3])
+    run(["echo", 1, 2, 3], shell=True)
 
     proc = run(["echo", "hello"], check=False)
     assert proc.exit_code == 0, proc.exit_code
@@ -1081,6 +1088,10 @@ def yaml_operations():
 
         assert input_data == parsed_data, (input_data, parsed_data)
         assert yaml == emitted_yaml, (yaml, emitted_yaml)
+
+        with expect_output(equals=emitted_yaml) as out:
+            with open(out, "w") as f:
+                print_yaml(input_data, file=f, end="")
 
 @command
 def prancer():
