@@ -28,7 +28,8 @@ def run_client(config, connections, rate):
         "--clients", connections,
         "--rps", rate,
         "--duration", config.duration,
-        "--threads", min(4, connections),
+        "--warm-up-time", 5,
+        "--threads", min(10, connections),
         "--max-concurrent-streams", 10,
     ]
 

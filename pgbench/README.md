@@ -11,7 +11,7 @@ Server namespace:
     kubectl create namespace benchdog-server
     kubectl config set-context --current --namespace benchdog-server
     kubectl apply -f server/
-    kubectl expose deployment/pgbench-server --port 5432 --type LoadBalancer
+    kubectl expose deployment/pgbench-server --port 55432 --type LoadBalancer
 
 #### Running root containers in OpenShift
 
@@ -40,7 +40,7 @@ Server namespace:
     kubectl config set-context --current --namespace benchdog-server
     skupper init
     skupper token create ~/token.yaml
-    skupper expose deployment/pgbench-server --port 5432
+    skupper expose deployment/pgbench-server --port 55432
 
 Client namespace:
 
