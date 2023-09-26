@@ -13,6 +13,6 @@ RUN chown -R 1001:0 /run/nginx.pid && chmod 664 /run/nginx.pid
 RUN chown -R 1001:0 /var/log/nginx && chmod 775 /var/log/nginx
 
 USER 1001
-EXPOSE 8080
+EXPOSE 58080
 
 CMD ["/usr/sbin/nginx"]
