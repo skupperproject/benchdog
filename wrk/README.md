@@ -29,7 +29,7 @@ Server namespace:
     kubectl config set-context --current --namespace benchdog-server
     skupper init
     skupper token create ~/token.yaml
-    skupper expose deployment/wrk-server --port 8080
+    skupper expose deployment/wrk-server --port 58080
 
 Client namespace:
 

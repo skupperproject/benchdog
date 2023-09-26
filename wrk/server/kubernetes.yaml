@@ -18,7 +18,7 @@ spec:
         - name: wrk-server
           image: quay.io/ssorj/benchdog-wrk-server
           ports:
-            - containerPort: 8080
+            - containerPort: 58080
 ---
 apiVersion: v1
 kind: Service
@@ -28,9 +28,9 @@ metadata:
   name: wrk-server
 spec:
   ports:
-  - port: 8080
+  - port: 58080
     protocol: TCP
-    targetPort: 8080
+    targetPort: 58080
   selector:
     app: wrk-server
   type: LoadBalancer
