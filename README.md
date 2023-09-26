@@ -12,31 +12,39 @@ Skupper-specific about them.
 ## Overview
 
 Each benchmark has a server container and a client container.  All
-tests run with a single server instance.  The number of client jobs
-varies across three scenarios: 1 job, 10 jobs, and 100 jobs.  A job
-typically corresponds to a client connection.
-
-For each scenario, we perform a certain number of iterations (default
-5).  For our results, we keep only the "middlest" value, by
-throughput.
+tests run with a single server instance.  The number of client
+connections can be configured.  The default is a set with 10
+connections, 100 connections, and 500 connections.
 
 Sample output:
 
-    CLIENTS    THROUGHPUT   LATENCY AVG   LATENCY 50%   LATENCY 99%
-          1        581.98          1.82          1.64          6.84
-         10      4,444.76          2.40          2.05          9.02
-        100     19,770.96          5.19          4.58         14.27
+    ## Configuration
 
-    Each operation is an HTTP/1.1 GET request.
+    Host:        localhost
+    Port:        55432
+    Scenarios:   10:100,100:100,500:100
+    Duration:    60 seconds
+    Iterations:  1
+
+    ## Results
+
+    CONNECTIONS          THROUGHPUT     LATENCY AVG     LATENCY P50     LATENCY P99
+             10         994.0 ops/s        0.260 ms        0.230 ms        0.580 ms
+            100      10,000.9 ops/s        0.200 ms        0.180 ms        0.370 ms
+            500      49,938.5 ops/s        0.350 ms        0.160 ms        2.840 ms
+
+    Each operation is a SQL select.
     Throughput is the number of operations per second.
     Latency is the duration of an operation in milliseconds.
     High and low results from repeated runs are discarded.
 
 ## Benchmarks
 
+- [**h2load**](h2load) - HTTP/2
 - [**kbench**](kbench) - Kafka
 - [**pgbench**](pgbench) - PostgreSQL
-- [**wrk**](wrk) - HTTP/1.1 and Nginx
+- [**qbench**](qbench) - AMQP messaging
+- [**wrk**](wrk) - HTTP/1.1
 
 ## Configuration
 
@@ -44,10 +52,12 @@ The benchmark client is configured using these environment variables:
 
 - **BENCHDOG_HOST** - The host to connect to (default localhost)
 - **BENCHDOG_PORT** - The port to connect to (the default is benchmark specific)
+- **BENCHDOG_SCENARIOS - A comma-separated list of
+  `<connections>:<rate>` pairs.  The rate is per connection.
 - **BENCHDOG_DURATION** - The time in seconds to run the test (default 60)
-- **BENCHDOG_ITERATIONS** - The number of repeated runs for each scenario (default 5)
-
-<!-- - **BENCHDOG_TLS** - Set to `1` to connect using TLS (TLS is off by default) -->
+- **BENCHDOG_ITERATIONS** - The number of repeated runs for each
+  scenario (default 1).  If this is more than 1, the high median by
+  average latency is reported.
 
 ## Testing with Skupper
 
@@ -56,10 +66,7 @@ server on Kubernetes.
 
 ### Configuring Skupper router resource limits
 
-Setting the CPU limit implicitly sets the requested CPU to the same
-value.
-
-    skupper init --router-cpu-limit 0.5
+    skupper init --router-cpu 0.5
 
 ### Monitoring CPU and memory usage
 
