@@ -1,5 +1,5 @@
 import json as _json
-import numpy as _numpy
+import statistics as _statistics
 
 from plano import *
 
@@ -39,7 +39,7 @@ def report(config, results, operation_text=None):
     for scenario, result in results.items():
         latencies = [x["latency"]["average"] for x in result]
 
-        latency = _numpy.percentile(latencies, 50, interpolation="nearest")
+        latency = _statistics.median_high(latencies)
         index = latencies.index(latency)
         result = result[index]
 

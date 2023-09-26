@@ -1,10 +1,10 @@
 FROM docker.io/postgres
 
 RUN apt-get -qq update > /dev/null
-RUN apt-get -qq install postgresql-contrib python3-numpy > /dev/null
+RUN apt-get -qq install postgresql-contrib python3-pandas > /dev/null
 
 COPY python /app/python
 COPY subrepos /app/subrepos
 
 WORKDIR /app
-CMD ["python3", "python/main.py"]
+CMD ["/usr/bin/python3", "python/main.py"]

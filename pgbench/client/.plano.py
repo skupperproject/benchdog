@@ -4,10 +4,11 @@ image_tag = "quay.io/ssorj/benchdog-pgbench-client"
 
 @command
 def build():
+    copy("../../common/benchdog.py", "python/benchdog.py")
     run(f"podman build -t {image_tag} .")
 
 @command
-def run_(host="localhost", port=5432, duration=10, iterations=1):
+def run_(host="localhost", port=55432, duration=10, iterations=1):
     build()
     run(f"podman run --net host --rm"
         f" --env BENCHDOG_HOST={host} --env BENCHDOG_PORT={port}"
