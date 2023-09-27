@@ -25,7 +25,6 @@ from plano import *
 def load_config(default_port=8080, default_scenarios="10:100,100:100,500:100"):
     return Namespace(host=ENV.get("BENCHDOG_HOST", "localhost"),
                      port=ENV.get("BENCHDOG_PORT", default_port),
-                     tls=ENV.get("BENCHDOG_TLS", "0") == "1",
                      scenarios=ENV.get("BENCHDOG_SCENARIOS", default_scenarios),
                      duration=int(ENV.get("BENCHDOG_DURATION", 60)),
                      iterations=int(ENV.get("BENCHDOG_ITERATIONS", 1)))
@@ -35,23 +34,17 @@ def report(config, results, operation_text=None):
     print("## Configuration")
     print()
 
-    if config.tls:
-        tls_state = "enabled"
-    else:
-        tls_state = "disabled"
-
     print(f"Host:        {config.host}")
     print(f"Port:        {config.port}")
-    print(f"TLS:         {tls_state}")
     print(f"Scenarios:   {config.scenarios}")
     print(f"Duration:    {config.duration} {plural('second', config.duration)}")
     print(f"Iterations:  {config.iterations}")
 
-    # print()
-    # print("## Data")
-    # print()
+    print()
+    print("## Data")
+    print()
 
-    # print(_json.dumps(results))
+    print_json(results)
 
     summary = dict()
 

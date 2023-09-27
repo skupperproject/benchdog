@@ -48,27 +48,36 @@ def process_output():
     if get_file_size("pgbench_log") == 0:
         raise Exception("No data in pgbench logs")
 
+    # 0: client_id
+    # 1: transaction_no
+    # 2: time (the transaction's elapsed time in microseconds)
+    # 3: script_no
+    # 4: time_epoch (the transaction's completion time as an epoch timestamp (seconds))
+    # 5: time_us (the fractional extension to time_epoch, in microseconds)
+    # 6: schedule_lag (the transaction's start delay in microseconds)
+
     data = _pandas.read_table("pgbench_log", sep=" ", header=None, dtype="int")
+    data = data.sort_values([4, 5])
 
-    start = data.loc[data[4].idxmin()]
-    end = data.loc[data[4].idxmax()]
+    first = data.head(1).iloc[0]
+    last = data.tail(1).iloc[0]
 
-    start_time = start[4] + start[5] / 1_000_000 - start[2] / 1_000_000
-    end_time = end[4] + end[5] / 1_000_000
+    start_time = (first[4] + first[5] / 1_000_000) - first[2] / 1_000_000
+    end_time = last[4] + last[5] / 1_000_000
 
     duration = end_time - start_time
     operations = len(data)
-    latencies = data[2]
+    latencies = data[2] + data[6] # Transaction time + start delay
     average = latencies.mean()
     percentiles = latencies.quantile(0.5), latencies.quantile(0.99)
 
     data = {
-        "duration": round(duration, 2),
+        "duration": round(duration, 3),
         "operations": operations,
         "latency": {
-            "average": round(average / 1000, 2),
-            "p50": round(percentiles[0] / 1000, 2),
-            "p99": round(percentiles[1] / 1000, 2),
+            "average": round(average / 1000, 3),
+            "p50": round(percentiles[0] / 1000, 3),
+            "p99": round(percentiles[1] / 1000, 3),
         },
     }
 
