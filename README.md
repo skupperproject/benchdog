@@ -54,8 +54,8 @@ The benchmark client is configured using these environment variables:
 - **BENCHDOG_PORT** - The port to connect to (the default is benchmark specific)
 - **BENCHDOG_DURATION** - The time in seconds to run the test (default 60)
 - **BENCHDOG_ITERATIONS** - The number of repeated runs for each
-  scenario (default 1).  If this is more than 1, the high median by
-  average latency is reported.
+  scenario (default 1).  If greater than 1, the high median
+  result selected by average latency is reported.
 - **BENCHDOG_SCENARIOS** - A comma-separated list of
   `<connections>:<rate>` pairs, where `<connections>` is the number of
   concurrent client connections and `<rate>` is the number of
@@ -66,7 +66,7 @@ The benchmark client is configured using these environment variables:
 The individual benchmarks have instructions for running the client and
 server on Kubernetes.
 
-### Configuring Skupper router resource limits
+### Configuring router CPU
 
     skupper init --router-cpu 0.5
 
@@ -84,4 +84,4 @@ effect.
 - https://www.postgresql.org/docs/current/pgbench.html
 - https://gist.github.com/jkreps/c7ddb4041ef62a900e6c
 - https://github.com/denji/awesome-http-benchmark
-- https://github.com/wg/wrk
+- https://github.com/giltene/wrk2

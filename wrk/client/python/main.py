@@ -3,8 +3,6 @@ import numpy as _numpy
 
 from benchdog import *
 
-config = load_config()
-
 def run_client(config, connections, rate):
     args = [
         "wrk",

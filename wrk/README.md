@@ -1,7 +1,7 @@
 # Benchdog: wrk
 
-A containerized HTTP/1.1 benchmark tool based on [wrk][wkr] and
-[ngingx][nginx].
+A containerized HTTP/1.1 benchmark tool based on [wrk][wrk] and
+[nginx][nginx].
 
 [wrk]: https://github.com/wg/wrk
 [nginx]: https://nginx.org/
@@ -13,6 +13,7 @@ Server namespace:
     kubectl create namespace benchdog-server
     kubectl config set-context --current --namespace benchdog-server
     kubectl apply -f server/
+    kubectl expose deployment/wrk-server --port 58080 --type LoadBalancer
 
 ## Running the client in Kubernetes
 
