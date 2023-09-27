@@ -43,9 +43,15 @@ def run_client(config, connections, rate):
     return process_output()
 
 def process_output():
-    run("cat pgbench_log.* > pgbench_log", shell=True)
+    frames = list()
 
-    if get_file_size("pgbench_log") == 0:
+    for name in list_dir(".", "pgbench_log.*"):
+        frame = _pandas.read_table(name, sep=" ", header=None, dtype="int")
+        frames.append(frame)
+
+    data = _pandas.concat(frames, ignore_index=True)
+
+    if len(data) == 0:
         raise Exception("No data in pgbench logs")
 
     # 0: client_id
@@ -56,9 +62,7 @@ def process_output():
     # 5: time_us (the fractional extension to time_epoch, in microseconds)
     # 6: schedule_lag (the transaction's start delay in microseconds)
 
-    data = _pandas.read_table("pgbench_log", sep=" ", header=None, dtype="int")
     data = data.sort_values([4, 5])
-
     first = data.head(1).iloc[0]
     last = data.tail(1).iloc[0]
 
