@@ -54,3 +54,7 @@ can run the client with `--env BENCHDOG_HOST=pgbench-server`.
 Client namespace:
 
     kubectl run -it --rm --env BENCHDOG_HOST=pgbench-server --image quay.io/ssorj/benchdog-pgbench-client pgbench-client
+
+## Example commands
+
+    kubectl run -it --rm --env BENCHDOG_HOST=pgbench-server --env BENCHDOG_SCENARIOS=100:50,100:100,100:150,100:200,100:250 --env BENCHDOG_ITERATIONS=3 --env BENCHDOG_DURATION=60 --image quay.io/ssorj/benchdog-pgbench-client pgbench-client
