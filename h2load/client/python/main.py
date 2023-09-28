@@ -60,8 +60,8 @@ def process_output(config, output_file):
     for line in output:
         if line.startswith("time for request:"):
             items = line.split()
-            max_latency = convert(items[4])
-            average_latency = convert(items[5])
+            max_latency = convert_value(items[4])
+            average_latency = convert_value(items[5])
             break
     else:
         raise Exception(output)
@@ -78,7 +78,7 @@ def process_output(config, output_file):
 
     return results
 
-def convert(value):
+def convert_value(value):
     if value.endswith("us"):
         return float(value.removesuffix("us")) / 1000
 

@@ -41,3 +41,11 @@ can run the client with `--env BENCHDOG_HOST=h2load-server`.
 Client namespace:
 
     kubectl run -it --rm --env BENCHDOG_HOST=h2load-server --image quay.io/ssorj/benchdog-h2load-client h2load-client
+
+## Example commands
+
+    kubectl run -it --rm --env BENCHDOG_HOST=h2load-server --env BENCHDOG_SCENARIOS=100:100,100:200,100:300,100:400,100:500 --env BENCHDOG_ITERATIONS=3 --env BENCHDOG_DURATION=60 --image quay.io/ssorj/benchdog-h2load-client h2load-client
+
+    kubectl run -it --rm --env BENCHDOG_HOST=h2load-server --env BENCHDOG_SCENARIOS=100:100,500:100 --env BENCHDOG_ITERATIONS=3 --env BENCHDOG_DURATION=60 --image quay.io/ssorj/benchdog-h2load-client h2load-client
+
+    kubectl run -it --rm --env BENCHDOG_HOST=h2load-server --env BENCHDOG_SCENARIOS=100:100 --env BENCHDOG_ITERATIONS=7 --env BENCHDOG_DURATION=60 --image quay.io/ssorj/benchdog-h2load-client h2load-client
