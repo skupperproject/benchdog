@@ -3,6 +3,9 @@
 if [ "$#" != 1 -a "$#" != 3 ]
 then
     echo "Usage: setup-skupper.sh ROUTER-CPU [DEPLOYMENT-NAME PORT]"
+    echo "Provide the DEPLOYMENT-NAME and PORT on the server site."
+    echo "Omit them on the client site."
+
     exit 1
 fi
 
@@ -20,6 +23,7 @@ then
     skupper expose deployment/"$2" --port "$3"
 else
     # The client site
+
     skupper link create ~/a.token
     kubectl get service -w
 fi
