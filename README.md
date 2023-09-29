@@ -12,10 +12,10 @@ Skupper-specific about them.
 ## Overview
 
 Each benchmark has a server container and a client container.  All
-tests run with a single server instance.  The number of client
-connections and target throughput can be configured.  The default is a
-set with 10 connections, 100 connections, and 500 connections, with
-each connection running 100 operations per second.
+tests run with a single client and a single server.  The number of
+client connections and target throughput can be configured.  The
+default is a set with 10 connections, 100 connections, and 500
+connections, with each connection running 100 operations per second.
 
 Sample output:
 
@@ -41,11 +41,15 @@ Sample output:
 
 ## Benchmarks
 
-- [**h2load**](h2load) - HTTP/2
-- [**kbench**](kbench) - Kafka
-- [**pgbench**](pgbench) - PostgreSQL
-- [**qbench**](qbench) - AMQP messaging
-- [**wrk**](wrk) - HTTP/1.1
+[**h2load**](h2load) - HTTP/2
+
+[**kbench**](kbench) - Kafka
+
+[**pgbench**](pgbench) - PostgreSQL
+
+[**qbench**](qbench) - AMQP messaging
+
+[**wrk**](wrk) - HTTP/1.1
 
 ## Configuration
 
