@@ -1,10 +1,11 @@
 from plano import *
 
-image_tag = "quay.io/ssorj/benchdog-h2load-server"
+image_tag = "quay.io/skupper/benchdog-h2load-server"
 
 @command
-def build():
-    run(f"podman build -t {image_tag} .")
+def build(no_cache=False):
+    no_cache = "--no-cache" if no_cache else ""
+    run(f"podman build -t {image_tag} {no_cache} .")
 
 @command
 def run_():

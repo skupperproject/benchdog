@@ -16,6 +16,6 @@ spec:
     spec:
       containers:
         - name: h2load-server
-          image: quay.io/ssorj/benchdog-h2load-server
+          image: quay.io/skupper/benchdog-h2load-server
           ports:
             - containerPort: 58080
