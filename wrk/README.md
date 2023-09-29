@@ -1,6 +1,6 @@
 # Benchdog: wrk
 
-A containerized HTTP/1.1 benchmark tool based on [wrk][wrk] and
+A containerized HTTP/1.1 benchmark based on [wrk][wrk] and
 [nginx][nginx].
 
 [wrk]: https://github.com/wg/wrk

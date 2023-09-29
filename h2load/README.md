@@ -1,6 +1,6 @@
 # Benchdog: h2load
 
-A containerized AMQP messaging benchmark based on [h2load][h2load].
+A containerized HTTP/2 benchmark based on [h2load][h2load].
 
 [h2load]: https://nghttp2.org/documentation/h2load.1.html
 
