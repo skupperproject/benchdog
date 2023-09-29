@@ -13,8 +13,9 @@ Skupper-specific about them.
 
 Each benchmark has a server container and a client container.  All
 tests run with a single server instance.  The number of client
-connections can be configured.  The default is a set with 10
-connections, 100 connections, and 500 connections.
+connections and target throughput can be configured.  The default is a
+set with 10 connections, 100 connections, and 500 connections, with
+each connection running 100 operations per second.
 
 Sample output:
 
@@ -50,21 +51,25 @@ Sample output:
 
 The benchmark client is configured using these environment variables:
 
-- **BENCHDOG_HOST** - The host to connect to (default localhost)
-- **BENCHDOG_PORT** - The port to connect to (the default is benchmark specific)
-- **BENCHDOG_DURATION** - The time in seconds to run the test (default 60)
-- **BENCHDOG_ITERATIONS** - The number of repeated runs for each
-  scenario (default 1).  If greater than 1, the high median
-  result selected by average latency is reported.
-- **BENCHDOG_SCENARIOS** - A comma-separated list of
-  `<connections>:<rate>` pairs, where `<connections>` is the number of
-  concurrent client connections and `<rate>` is the number of
-  operations per second, per connection.
+**BENCHDOG_HOST** - The host to connect to (default `localhost`).
+
+**BENCHDOG_PORT** - The port to connect to (the default is benchmark-specific).
+
+**BENCHDOG_DURATION** - The time in seconds to run the test (default `60`).
+
+**BENCHDOG_ITERATIONS** - The number of repeated runs for each
+scenario (default `1`).  If greater than 1, the high median result
+selected by average latency is reported.
+
+**BENCHDOG_SCENARIOS** - A comma-separated list of
+`<connections>:<rate>` pairs, where `<connections>` is the number of
+concurrent client connections and `<rate>` is the number of operations
+per second, per connection (default `10:100,100:100,500:100`).
 
 ## Testing with Skupper
 
 The individual benchmarks have instructions for running the client and
-server on Kubernetes.
+server in Kubernetes and setting up Skupper.
 
 ### Configuring router CPU
 
@@ -80,8 +85,5 @@ effect.
 
 ## Resources
 
-- https://dev.mysql.com/downloads/benchmarks.html
-- https://www.postgresql.org/docs/current/pgbench.html
-- https://gist.github.com/jkreps/c7ddb4041ef62a900e6c
 - https://github.com/denji/awesome-http-benchmark
 - https://github.com/giltene/wrk2
