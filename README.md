@@ -45,9 +45,9 @@ Sample output:
 
 [**kbench**](kbench) - Kafka
 
-[**pgbench**](pgbench) - PostgreSQL
+[**qbench**](qbench) - Messaging
 
-[**qbench**](qbench) - AMQP messaging
+[**pgbench**](pgbench) - PostgreSQL
 
 [**wrk**](wrk) - HTTP/1.1
 

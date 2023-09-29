@@ -1,6 +1,6 @@
 # Benchdog: qbench
 
-A containerized AMQP messaging benchmark based on [qbench][qbench].
+A containerized messaging benchmark based on [qbench][qbench].
 
 [qbench]: https://github.com/ssorj/qbench
 
