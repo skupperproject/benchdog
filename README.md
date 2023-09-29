@@ -43,7 +43,7 @@ Sample output:
 
 [**h2load**](h2load) - HTTP/2
 
-[**kbench**](kbench) - Kafka
+<!-- [**kbench**](kbench) - Kafka -->
 
 [**qbench**](qbench) - Messaging
 
