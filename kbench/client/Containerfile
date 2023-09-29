@@ -1,13 +1,32 @@
-FROM registry.access.redhat.com/ubi9/ubi-minimal
+#
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+#
 
-RUN microdnf -y install java-17-openjdk-headless pip && microdnf clean all
+FROM registry.fedoraproject.org/fedora-minimal
 
-RUN pip install pandas
+RUN microdnf -y --setopt=install_weak_deps=False install java-17-openjdk-headless python python-pandas shadow-utils sysstat && microdnf clean all
 
-COPY python/ /app/python
-COPY subrepos/ /app/subrepos
-COPY target/ /app/target
+RUN groupadd -r fritz && useradd -r -g fritz fritz
 
-WORKDIR /app
+COPY --chown=fritz:fritz python/ /home/fritz/python
+COPY --chown=fritz:fritz subrepos/ /home/fritz/subrepos
+COPY --chown=fritz:fritz target/ /home/fritz/target
 
+USER fritz
+WORKDIR /home/fritz
 CMD ["python", "python/main.py"]

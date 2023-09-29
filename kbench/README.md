@@ -22,7 +22,7 @@ Client namespace:
 
     kubectl create namespace benchdog-client
     kubectl config set-context --current --namespace benchdog-client
-    kubectl run kbench-client --attach --rm --restart Never --image quay.io/ssorj/benchdog-kbench-client \
+    kubectl run kbench-client --attach --rm --restart Never --image quay.io/skupper/benchdog-kbench-client \
         --env BENCHDOG_HOST=kbench-kafka-brokers.benchdog-server
 
 ## Testing with Skupper
@@ -46,7 +46,7 @@ BENCHDOG_HOST=kbench-kafka-brokers`.
 
 Client namespace:
 
-    kubectl run kbench-client --attach --rm --restart Never --image quay.io/ssorj/benchdog-kbench-client \
+    kubectl run kbench-client --attach --rm --restart Never --image quay.io/skupper/benchdog-kbench-client \
         --env BENCHDOG_HOST=kbench-kafka-brokers
 
 ## Cleaning up

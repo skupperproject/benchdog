@@ -1,6 +1,6 @@
 from plano import *
 
-image_tag = "quay.io/ssorj/benchdog-kbench-client"
+image_tag = "quay.io/skupper/benchdog-kbench-client"
 
 @command
 def build():
@@ -18,10 +18,13 @@ def clean():
     remove("__pycache__")
 
 @command
-def build_image():
+def build_image(no_cache=False):
     clean()
     build()
-    run(f"podman build -t {image_tag} .")
+
+    no_cache = "--no-cache" if no_cache else ""
+
+    run(f"podman build -t {image_tag} {no_cache} .")
 
 @command
 def run_image():
