@@ -16,6 +16,6 @@ spec:
     spec:
       containers:
         - name: qbench-server
-          image: quay.io/ssorj/benchdog-qbench-server
+          image: quay.io/skupper/benchdog-qbench-server
           ports:
             - containerPort: 55672

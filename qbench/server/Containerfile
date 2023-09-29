@@ -19,12 +19,10 @@
 
 FROM registry.fedoraproject.org/fedora-minimal AS build
 
-RUN microdnf -y install gcc git python-pandas qpid-proton-c-devel shadow-utils && microdnf clean all
+RUN microdnf -y --setopt=install_weak_deps=False install gcc git python python-pandas qpid-proton-c-devel shadow-utils && microdnf clean all
 
 RUN groupadd -r fritz && useradd -r -g fritz fritz
 USER fritz
-
-COPY --chown=fritz:fritz . /home/fritz/repo
 WORKDIR /home/fritz
 
 RUN git clone --depth 1 https://github.com/ssorj/qbench.git
@@ -32,16 +30,17 @@ RUN git clone --depth 1 https://github.com/ssorj/qbench.git
 WORKDIR /home/fritz/qbench
 RUN ./plano install
 
-FROM registry.fedoraproject.org/fedora-minimal AS run
+FROM registry.fedoraproject.org/fedora-minimal
 
-RUN microdnf -y install python-pandas qpid-proton-c shadow-utils sysstat && microdnf clean all
+RUN microdnf -y --setopt=install_weak_deps=False install python python-pandas qpid-proton-c shadow-utils sysstat && microdnf clean all
 
 RUN groupadd -r fritz && useradd -r -g fritz fritz
-USER fritz
 
 COPY --chown=fritz:fritz --from=build /home/fritz/.local /home/fritz/.local
 
 ENV PATH="/home/fritz/.local/bin:$PATH"
 ENV PYTHONPATH="/home/fritz/.local/lib/python3.11"
 
+USER fritz
+WORKDIR /home/fritz
 CMD ["/home/fritz/.local/bin/qbench", "server", "--host", "0.0.0.0", "--port", "55672"]

@@ -1,11 +1,14 @@
 from plano import *
 
-image_tag = "quay.io/ssorj/benchdog-qbench-client"
+image_tag = "quay.io/skupper/benchdog-qbench-client"
 
 @command
-def build():
+def build(no_cache=False):
     copy("../../common/benchdog.py", "python/benchdog.py")
-    run(f"podman build -t {image_tag} .")
+
+    no_cache = "--no-cache" if no_cache else ""
+
+    run(f"podman build -t {image_tag} {no_cache} .")
 
 @command
 def run_(host="localhost", port=55672, duration=10, iterations=1):
