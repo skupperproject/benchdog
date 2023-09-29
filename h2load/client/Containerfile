@@ -22,10 +22,10 @@ FROM registry.fedoraproject.org/fedora-minimal
 RUN microdnf -y --setopt=install_weak_deps=False install nghttp2 python python-pandas shadow-utils sysstat && microdnf clean all
 
 RUN groupadd -r fritz && useradd -r -g fritz fritz
+
+COPY --chown=fritz:fritz python /home/fritz/python
+COPY --chown=fritz:fritz subrepos /home/fritz/subrepos
+
 USER fritz
-
-COPY python /home/fritz/python
-COPY subrepos /home/fritz/subrepos
-
 WORKDIR /home/fritz
-CMD ["python", "python/main.py"]
+CMD ["/usr/bin/python", "python/main.py"]
