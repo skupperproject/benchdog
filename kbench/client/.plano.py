@@ -6,7 +6,7 @@ image_tag = "quay.io/ssorj/benchdog-kbench-client"
 def build():
     run("mvn package")
 
-@command(name="run")
+@command
 def run_():
     build()
     run("python python/main.py")

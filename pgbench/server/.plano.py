@@ -6,7 +6,7 @@ image_tag = "quay.io/ssorj/benchdog-pgbench-server"
 def build():
     run(f"podman build -t {image_tag} .")
 
-@command(name="run")
+@command
 def run_():
     build()
     run(f"podman run --rm -p 55432:55432 {image_tag}")
