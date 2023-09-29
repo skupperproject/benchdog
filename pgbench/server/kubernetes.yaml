@@ -16,6 +16,6 @@ spec:
     spec:
       containers:
         - name: pgbench-server
-          image: quay.io/ssorj/benchdog-pgbench-server
+          image: quay.io/skupper/benchdog-pgbench-server
           ports:
             - containerPort: 55432

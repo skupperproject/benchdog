@@ -1,6 +1,6 @@
 from plano import *
 
-image_tag = "quay.io/ssorj/benchdog-pgbench-server"
+image_tag = "quay.io/skupper/benchdog-pgbench-server"
 
 @command
 def build():
