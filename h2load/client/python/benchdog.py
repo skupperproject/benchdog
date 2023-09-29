@@ -31,6 +31,12 @@ def load_config(default_port=8080, default_scenarios="10:100,100:100,500:100"):
 
 def report(config, results, operation_text=None):
     print()
+    print("## Data")
+    print()
+
+    print_json(results)
+
+    print()
     print("## Configuration")
     print()
 
@@ -39,12 +45,6 @@ def report(config, results, operation_text=None):
     print(f"Scenarios:   {config.scenarios}")
     print(f"Duration:    {config.duration} {plural('second', config.duration)}")
     print(f"Iterations:  {config.iterations}")
-
-    print()
-    print("## Data")
-    print()
-
-    print_json(results)
 
     summary = dict()
 
