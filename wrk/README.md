@@ -21,7 +21,7 @@ Client namespace:
 
     kubectl create namespace benchdog-client
     kubectl config set-context --current --namespace benchdog-client
-    kubectl run -it --rm --env BENCHDOG_HOST=<host> --image quay.io/ssorj/benchdog-wrk-client wrk-client
+    kubectl run -it --rm --env BENCHDOG_HOST=<host> --image quay.io/skupper/benchdog-wrk-client wrk-client
 
 ## Testing with Skupper
 
@@ -43,4 +43,4 @@ run the client with `--env BENCHDOG_HOST=wrk-server`.
 
 Client namespace:
 
-    kubectl run -it --rm --env BENCHDOG_HOST=wrk-server --image quay.io/ssorj/benchdog-wrk-client wrk-client
+    kubectl run -it --rm --env BENCHDOG_HOST=wrk-server --image quay.io/skupper/benchdog-wrk-client wrk-client

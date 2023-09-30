@@ -16,6 +16,6 @@ spec:
     spec:
       containers:
         - name: wrk-server
-          image: quay.io/ssorj/benchdog-wrk-server
+          image: quay.io/skupper/benchdog-wrk-server
           ports:
             - containerPort: 58080
