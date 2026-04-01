@@ -25,7 +25,7 @@ RUN groupadd -r fritz && useradd -r -g fritz fritz
 USER fritz
 WORKDIR /home/fritz
 
-RUN git clone --depth 1 https://github.com/ssorj/qbench.git
+RUN git clone --depth 1 https://github.com/skupperproject/qbench.git
 
 WORKDIR /home/fritz/qbench
 RUN ./plano install
