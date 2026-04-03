@@ -2,7 +2,7 @@
 
 A containerized messaging benchmark based on [qbench][qbench].
 
-[qbench]: https://github.com/ssorj/qbench
+[qbench]: https://github.com/skupperproject/qbench
 
 ## Running the server in Kubernetes
 
