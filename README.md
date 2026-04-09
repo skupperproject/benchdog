@@ -49,6 +49,8 @@ Sample output:
 
 [**pgbench**](pgbench) - PostgreSQL
 
+[**cbench**](cbench) - Connection Rate
+
 [**wrk**](wrk) - HTTP/1.1
 
 ## Configuration

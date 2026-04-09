@@ -1,0 +1,75 @@
+#! /bin/bash
+
+#
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+#
+
+
+
+DURATION=15
+
+echo "r_client: CBENCH_HOST == ${CBENCH_HOST}"
+echo "r_client: CBENCH_PORT == ${CBENCH_PORT}"
+
+# To change the number of clients in each test,
+# before running this do someting like this:
+# export N_CLIENTS_LIST="2 6 12 15"
+
+if [ -z "${N_CLIENTS_LIST}" ]
+then
+  N_CLIENTS_LIST="1 2 5"
+fi
+
+
+# Ensure that the output dir only contains
+# data for this run.
+OUTPUT_DIR=./data
+rm -rf ${OUTPUT_DIR}
+mkdir  ${OUTPUT_DIR}
+
+
+print_flag=print_header
+for N_CLIENTS in ${N_CLIENTS_LIST} # Each loop is one run of the test
+do
+  #echo "Running test for N_CLIENTS == ${N_CLIENTS}"
+  C_OUTPUT=${OUTPUT_DIR}/client_output_${N_CLIENTS}.output
+
+  ./client  ${N_CLIENTS} ${OUTPUT_DIR} > ${C_OUTPUT} 2>&1 &
+  CLIENT_PID=$!
+
+  sleep ${DURATION}
+  kill -9 ${CLIENT_PID}
+  wait ${CLIENT_PID} 2>/dev/null   # suppress kill message, it's just confusing
+
+
+  ./collect.py ${print_flag} ${N_CLIENTS} ${OUTPUT_DIR}/*.data
+  print_flag=dont_print
+done
+
+
+
+# Keep this script running for a while so the user 
+# can see the kube logs.
+count=1
+while [ $count -lt 101 ]
+do
+  echo "client complete ${count}"
+  count=$(( $count + 1 ))
+  sleep 10
+done
+
